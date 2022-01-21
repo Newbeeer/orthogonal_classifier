@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="a7ac09bf-57aa-4786-9d13-f6eba5f21027" name="mit">
+        <fileTransfer accessType="SFTP" host="susi.csail.mit.edu" port="22" sshConfigId="f359119f-2af8-4b10-b066-18f06ce3eaf3" sshConfig="ylxu@susi.csail.mit.edu:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
