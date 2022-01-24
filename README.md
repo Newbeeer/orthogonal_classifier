@@ -1,6 +1,6 @@
 # Orthogonal Classifiers
 
-[*Controlling Directions Orthogonal to a Classifier*](https://openreview.net/forum?id=DIjCrlsu6Z) , ICLR 2022
+Implementations of  [*Controlling Directions Orthogonal to a Classifier*](https://openreview.net/forum?id=DIjCrlsu6Z) , ICLR 2022
 
 ​		[Yilun Xu](yilun-xu.com), [Hao He](http://people.csail.mit.edu/hehaodele/), [Tianxiao Shen](https://people.csail.mit.edu/tianxiao/), [Tommi Jaakkola](http://people.csail.mit.edu/tommi/tommi.html)
 
