@@ -7,7 +7,7 @@ def _hparams(algorithm, dataset, random_state, args):
     Global registry of hyperparams. Each entry is a (default, random) tuple.
     New algorithms / networks / etc. should add entries here.
     """
-    SMALL_IMAGES = ['Debug28', 'RotatedMNIST', 'ColoredMNIST', "MNIST_SVHN"]
+    SMALL_IMAGES = ['Debug28', 'RotatedMNIST', 'CMNIST', "MNIST_SVHN"]
 
     hparams = {}
     hparams['opt'] = (args.opt, args.opt)

@@ -41,13 +41,14 @@ parser.add_argument('--gaussian_noise', type=float, default=1.0,
                     help="noise for feature extractor")
 parser.add_argument('--n_power', type=int, default=1,
                     help="gradient iterations")
-parser.add_argument('--source', action='store_true', default=False)
+parser.add_argument('--source_only', action='store_true', default=False)
 parser.add_argument('--save', action='store_true', default=False)
 parser.add_argument('--resume', action='store_true', default=False)
-parser.add_argument('--resume_epoch', type=int, default=9)
+parser.add_argument('--resume_path', type=str)
+parser.add_argument('--save_path', type=str)
 
 # methods
-parser.add_argument('--orth', action='store_true', default=False)
+parser.add_argument('--orthogonal', action='store_true', default=False)
 parser.add_argument('--dann', action='store_true', default=False)
 parser.add_argument('--adda', action='store_true', default=False)
 parser.add_argument('--iw', action='store_true', default=False, help='importance-weighted')

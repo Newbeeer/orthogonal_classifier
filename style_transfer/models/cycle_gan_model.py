@@ -15,55 +15,15 @@ from torchvision.models.inception import inception_v3
 from utils import save_image
 cross_entropy_loss = nn.CrossEntropyLoss()
 
-def js_loss_w2(x, y, pred):
+def orthogonal_loss(x, y, pred):
 
-    pred = F.sigmoid(pred)
+    pred = torch.sigmoid(pred)
     w = y * x + (1-y) * 1/x
     w = w.unsqueeze(1)
-    #w = torch.clamp(w, 1e-1, 10)
-    #w = torch.ones_like(pred).cuda()
     density_ratio = (pred*w)/(pred*w + 1 - pred)
-    #\density_ratio = torch.clamp(density_ratio, 1e-3, 10)
     loss = - torch.log(density_ratio + 1e-5)
 
     return torch.sum(loss) / len(pred)
-
-def kl_loss_w2_pred(x, y, pred):
-
-    pred = F.sigmoid(pred)
-    w = - (y * torch.log(torch.clamp(x, 1e-3, 10)) + (1-y) * torch.log(torch.clamp(1/x, 1e-3, 10))).unsqueeze(1)
-    loss = torch.log((1-pred)/pred) + w
-    return torch.sum(loss) / len(x)
-
-def kl_loss_w2(x, y):
-
-    loss = - (y * torch.log(torch.clamp(x, 1e-1, 10)) + (1-y) * torch.log(torch.clamp(1/x, 1e-1, 10)))
-    return torch.sum(loss) / len(x)
-
-def weighted_corss_entropy_loss(x, y, weights):
-
-    x = torch.sigmoid(x)
-    loss = -weights * (y * torch.log(x) + (1-y) * torch.log(1-x))
-    #print(x.size(),y.size(),weights.size(),loss.size())
-    return torch.sum(loss) / torch.sum(weights)
-
-def weighted_l1_loss(x, y, weights):
-
-    weights = weights.squeeze(1)
-    length = len(x)
-    x = x.view(length, -1)
-    y = y.view(length, -1)
-    l1_diff = torch.mean(torch.abs(x-y), dim=1)
-    return torch.sum(l1_diff * weights) / torch.sum(weights)
-
-def weighted_kl_loss(x, weights=None, reverse=False, sigmoid = True):
-    if weights is None:
-        weights = torch.ones(x.size()).cuda()
-    x = F.sigmoid(x) if sigmoid else x
-    if reverse:
-        x = 1-x
-    loss = -weights * torch.log(x/(1-x)+0.001)
-    return torch.sum(loss) / torch.sum(weights)
 
 class CycleGANModel(BaseModel):
     """
@@ -114,8 +74,6 @@ class CycleGANModel(BaseModel):
         # specify the training losses you want to print out. The training/test scripts will call <BaseModel.get_current_losses>
         self.loss_names = ['D_A', 'G_A', 'cycle_A', 'idt_A', 'D_B', 'G_B', 'cycle_B', 'idt_B']
         # specify the images you want to save/display. The training/test scripts will call <BaseModel.get_current_visuals>
-        # visual_names_A = ['real_A', 'fake_B', 'rec_A']
-        # visual_names_B = ['real_B', 'fake_A', 'rec_B']
         visual_names_A = ['real_A', 'fake_B', 'rec_A']
         visual_names_B = ['real_B', 'fake_A', 'rec_B']
         if self.isTrain and self.opt.lambda_identity > 0.0:  # if identity loss is used, we also visualize idt_B=G_A(B) ad idt_A=G_A(B)
@@ -125,13 +83,6 @@ class CycleGANModel(BaseModel):
 
         self.opt = opt
         self.p_partial_B = self.p_partial_A = None
-        self.eval_batch = opt.eval
-        if self.eval_batch:
-            self.cnt_dict = {'rAc':0., 'rBc':0, 'fAc':0., 'fBc':0.,
-                             'rA': 0., 'rB': 0., 'fA': 0., 'fB': 0., 'correct':0., 'cnt':0., 'correct_inv':0.}
-            self.transform = transforms.Compose([transforms.ToPILImage(),
-                                                 transforms.Resize(28),
-                                                 transforms.ToTensor()])
         self.visual_names = visual_names_A + visual_names_B  # combine visualizations for A and B
         # specify the models you want to save to the disk. The training/test scripts will call <BaseModel.save_networks> and <BaseModel.load_networks>.
         if self.isTrain:
@@ -143,9 +94,9 @@ class CycleGANModel(BaseModel):
         # The naming is different from those used in the paper.
         # Code (vs. paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
         self.netG_A = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
-                                        not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+                                        opt.dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.netG_B = networks.define_G(opt.output_nc, opt.input_nc, opt.ngf, opt.netG, opt.norm,
-                                        not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+                                        opt.dropout, opt.init_type, opt.init_gain, self.gpu_ids)
         self.ema_G_A = ExponentialMovingAverage(self.netG_A.parameters(), decay=0.995)
         self.ema_G_B = ExponentialMovingAverage(self.netG_B.parameters(), decay=0.995)
         if self.isTrain:  # define discriminators
@@ -183,20 +134,17 @@ class CycleGANModel(BaseModel):
         The option 'direction' can be used to swap domain A and domain B.
         """
         AtoB = self.opt.direction == 'AtoB'
-        # self.real_A = input['A' if AtoB else 'B'].to(self.device)
-        # self.real_B = input['B' if AtoB else 'A'].to(self.device)
         img = input[0]
         label = input[1]
         self.real_A = img[label == 0].cuda()
         self.real_B = img[label == 1].cuda()
-        #self.image_paths = input['A_paths' if AtoB else 'B_paths']
+        # self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
-        self.w_o = kwargs['net_o']
+        self.w_2 = kwargs['net_2']
         self.w_1 = kwargs['net_1']
         self.w_x = kwargs['net_x']
         self.w_1_oracle = kwargs['net_1_o']
-        if self.opt.reweight:
-            self.reweight_model = kwargs['net_reweight']
+        self.epoch = kwargs['epoch']
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
@@ -206,65 +154,35 @@ class CycleGANModel(BaseModel):
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
 
-    def forward_eval(self, resize=False, splits=10):
+    def forward_eval(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
-        # dtype = torch.cuda.FloatTensor
-        # inception_model = inception_v3(pretrained=True, transform_input=False).type(torch.cuda.FloatTensor)
-        # inception_model.eval()
-        # up = nn.Upsample(size=(299, 299), mode='bilinear').type(dtype)
-        # def get_pred(x):
-        #     if resize:
-        #         x = up(x)
-        #     x = inception_model(x)
-        #     return F.softmax(x).data.cpu().numpy()
         self.netG_A.eval()
         self.netG_B.eval()
         with torch.no_grad():
             self.fake_B = self.netG_A(self.real_A)  # G_A(A)
             self.fake_A = self.netG_B(self.real_B)  # G_B(B)
-            # self.pred[self.cnt_incept:self.cnt_incept + len(self.fake_B)] = get_pred(self.fake_B)
-            # self.cnt_incept += len(self.fake_B)
-            # self.pred[self.cnt_incept:self.cnt_incept + len(self.fake_A)] = get_pred(self.fake_A)
-            # self.cnt_incept += len(self.fake_A)
+
         self.netG_A.train()
         self.netG_B.train()
 
-    def inception(self, resize=True, splits=10):
-        # Now compute the mean kl-div
-        from scipy.stats import entropy
-        split_scores = []
-        N = self.cnt_incept
-        self.pred = self.pred[: N]
-        print(f"inception with {N} images")
-        for k in range(splits):
-            part = self.pred[k * (N // splits): (k + 1) * (N // splits), :]
-            py = np.mean(part, axis=0)
-            part = np.array(part)
-            scores = []
-            for i in range(part.shape[0]):
-                pyx = part[i, :]
-                scores.append(entropy(pyx, py))
-            split_scores.append(np.exp(np.mean(scores)))
-
-        print("Inception score : mean {0}, variance {1}".format(np.mean(split_scores), np.std(split_scores)))
-
-    def generate(self, save=False):
+    def generate(self, save=False, total_save=5):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
+        img_dict = {
+            'real_A': self.real_A,
+            'real_B': self.real_B,
+            'fake_A': self.fake_A,
+            'fake_B': self.fake_B
+        }
 
-
-        img = self.real_A if self.opt.real else self.fake_B
-        for idx in range(len(self.fake_B)):
-            image = img[idx].permute(1, 2, 0).squeeze().cpu().numpy()
-            image = ((image + 1.) * 127.5).astype(np.uint8)
-            imageio.imwrite(os.path.join('./generated_images', self.opt.out_path, str(self.cnt) + '_A.jpg'), image)
-            self.cnt += 1
-
-        img = self.real_B if self.opt.real else self.fake_A
-        for idx in range(len(self.fake_A)):
-            image = img[idx].permute(1, 2, 0).squeeze().cpu().numpy()
-            image = ((image + 1.) * 127.5).astype(np.uint8)
-            imageio.imwrite(os.path.join('./generated_images', self.opt.out_path, str(self.cnt) + '_B.jpg'), image)
-            self.cnt += 1
+        self.cnt_img = {key: 0 for key in img_dict.keys()}
+        for key, item in img_dict.items():
+            img = item
+            for idx in range(len(img)):
+                image = img[idx].permute(1, 2, 0).squeeze().cpu().numpy()
+                image = ((image + 1.) * 127.5).astype(np.uint8)
+                imageio.imwrite(os.path.join('style_transfer/generated_images',
+                                             self.opt.out_path, str(self.cnt) + f'_{key}.jpg'), image)
+                self.cnt_img[key] += 1
 
         # save images for visualization
         if save:
@@ -295,7 +213,9 @@ class CycleGANModel(BaseModel):
             save_image(img, fn(self.opt.out_path + '_real_B' + '.jpg'), nrow=len(img))
 
             self.save_cnt += 1
-            if self.save_cnt == 5:
+            if self.save_cnt == total_save:
+                print(f"Generate {total_save} images for visualization")
+                print(f"Now existing")
                 exit(0)
 
     def backward_D_basic(self, netD, real, fake):
@@ -347,68 +267,28 @@ class CycleGANModel(BaseModel):
             self.loss_idt_A = 0
             self.loss_idt_B = 0
 
-        if self.opt.obj == 'vanilla':
+        if self.opt.obj == 'vanilla' or (self.opt.obj == 'orthogonal' and self.epoch <= self.opt.pretrain_epoch):
             # GAN loss D_A(G_A(A))
             self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
             # GAN loss D_B(G_B(B))
             self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
-        elif self.opt.obj == 'kl':
-            # fixed classifier:
-            pred = self.netD_A(self.fake_B)
-            self.loss_G_A = weighted_kl_loss(pred)
-            pred = self.netD_B(self.fake_A)
-            self.loss_G_B = weighted_kl_loss(pred)
-            G_A_label = torch.ones((len(self.fake_B))).long().cuda()
-            G_B_label = torch.zeros((len(self.fake_A))).long().cuda()
-            def combine_predict(x):
-                p_inv = F.softmax(self.w_1.predict(x), dim=1)[:, 0]
-                p_full = F.softmax(self.w_x.predict(x), dim=1)[:, 0]
-                r = (p_full * (1 - p_inv)) / ((1 - p_full) * p_inv)
-                r = torch.clamp(r, 1e-3, 10)
-                return r
-            self.loss_G_A_eval = kl_loss_w2(combine_predict(self.fake_B), G_A_label)
-            self.loss_G_B_eval = kl_loss_w2(combine_predict(self.fake_A), G_B_label)
-            self.loss_G_A += self.loss_G_A_eval
-            self.loss_G_B += self.loss_G_B_eval
-            # pred_A = self.netD_A(self.fake_B)
-            # pred_B = self.netD_B(self.fake_A)
-            # G_A_label = torch.ones((len(self.fake_B))).long().cuda()
-            # G_B_label = torch.zeros((len(self.fake_A))).long().cuda()
-            # def combine_predict(x):
-            #     p_inv = F.softmax(self.inv_model.predict(x), dim=1)[:, 0]
-            #     p_full = F.softmax(self.full_model.predict(x), dim=1)[:, 0]
-            #     r = (p_full * (1 - p_inv)) / ((1 - p_full) * p_inv)
-            #     r = torch.clamp(r, 1e-1, 10)
-            #     return r
-            #
-            # self.loss_G_A = kl_loss_w2_pred(combine_predict(self.fake_B), G_A_label, pred_A)
-            # self.loss_G_B = kl_loss_w2_pred(combine_predict(self.fake_A), G_B_label, pred_B)
-        elif self.opt.obj == 'js':
+        else:
             # fixed classifier:
             pred_A = self.netD_A(self.fake_B)
             pred_B = self.netD_B(self.fake_A)
             G_A_label = torch.ones((len(self.fake_B))).long().cuda()
             G_B_label = torch.zeros((len(self.fake_A))).long().cuda()
+
             def combine_predict(x):
-                # oracle
-                # blond/non-blond -> non-blond/blond
-                # p_spur = F.softmax(self.w_o.predict(x), dim=1)[:, 1]
-                # r = p_spur / (1-p_spur)
-                if self.opt.reweight:
-                    p = F.softmax(self.reweight_model.predict(x), dim=1)[:, 0]
-                    r = p / (1-p)
-                else:
-                    p_inv = F.softmax(self.w_1.predict(x), dim=1)[:, 0]
-                    p_full = F.softmax(self.w_x.predict(x), dim=1)[:, 0]
-                    r = (p_full * (1 - p_inv)) / ((1 - p_full) * p_inv)
-                r = torch.clamp(r, 1e-3, 10)
+                p_inv = F.softmax(self.w_1.predict(x), dim=1)[:, 0]
+                p_full = F.softmax(self.w_x.predict(x), dim=1)[:, 0]
+                r = (p_full * (1 - p_inv)) / ((1 - p_full) * p_inv)
+                r = torch.clamp(r, 0.1, 9)
                 return r
 
-            self.loss_G_A = js_loss_w2(combine_predict(self.fake_B), G_A_label, pred_A)
-            self.loss_G_B = js_loss_w2(combine_predict(self.fake_A), G_B_label, pred_B)
-
+            self.loss_G_A = orthogonal_loss(combine_predict(self.fake_B), G_A_label, pred_A)
+            self.loss_G_B = orthogonal_loss(combine_predict(self.fake_A), G_B_label, pred_B)
         # Forward cycle loss || G_B(G_A(A)) - A||
-
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A) * lambda_A
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B) * lambda_B
@@ -427,9 +307,13 @@ class CycleGANModel(BaseModel):
         self.set_requires_grad([self.netD_A, self.netD_B], False)  # Ds require no gradients when optimizing Gs
         self.optimizer_G.zero_grad()  # set G_A and G_B's gradients to zero
         self.backward_G()             # calculate gradients for G_A and G_B
+
+        # prevent exploding gradient
+        torch.nn.utils.clip_grad_norm_(self.netG_A.parameters(), 1e-5)
+        torch.nn.utils.clip_grad_norm_(self.netG_B.parameters(), 1e-5)
         self.optimizer_G.step()       # update G_A and G_B's weights
 
-        # EMA
+        # # EMA
         # self.ema_G_A.update(self.netG_A.parameters())
         # self.ema_G_B.update(self.netG_B.parameters())
 
@@ -440,7 +324,7 @@ class CycleGANModel(BaseModel):
         self.backward_D_B()      # calculate gradients for D_B
         self.optimizer_D.step()  # update D_A and D_B's weights
 
-        # EMA
+        # # EMA
         # self.ema_D_A.update(self.netD_A.parameters())
         # self.ema_D_B.update(self.netD_B.parameters())
 
@@ -452,7 +336,7 @@ class CycleGANModel(BaseModel):
         if eval:
             print("Evaluation....")
         if print_stat:
-            print('A: w_o acc:{0:.3f}, w_1 acc:{1:.3f} / B: w_o acc:{2:.3f}, w_1 acc:{3:.3f} /total: w_o acc:{4:.3f}, w_1 acc:{5:.3f}'.format(
+            print('A: Z_2 acc:{0:.3f}, Z_1 acc:{1:.3f} / B: Z_2 acc:{2:.3f}, Z_1 acc:{3:.3f} /total: Z_2 acc:{4:.3f}, Z_1 acc:{5:.3f}'.format(
                                                                           self.cnt_dict['correct_A'] / self.cnt_dict['rAc'],
                                                                           self.cnt_dict['correct_inv_A'] / self.cnt_dict['rAc'],
                                                                           self.cnt_dict['correct_B'] / self.cnt_dict['rBc'],
@@ -466,9 +350,9 @@ class CycleGANModel(BaseModel):
             fake_B = self.fake_B
             fake_A = self.fake_A
 
-            correct_A = (self.w_o.predict(real_A).argmax(1) == self.w_o.predict(fake_B).argmax(
+            correct_A = (self.w_2.predict(real_A).argmax(1) == self.w_2.predict(fake_B).argmax(
                 1)).float().sum()
-            correct_B = (self.w_o.predict(real_B).argmax(1) == self.w_o.predict(fake_A).argmax(
+            correct_B = (self.w_2.predict(real_B).argmax(1) == self.w_2.predict(fake_A).argmax(
                 1)).float().sum()
             correct = correct_A + correct_B
 
@@ -490,7 +374,6 @@ class CycleGANModel(BaseModel):
             self.cnt_dict['correct_inv_A'] += correct_inv_A
             self.cnt_dict['correct_inv_B'] += correct_inv_B
             self.cnt_dict['cnt'] += len(real_A) + len(real_B)
-
 
     def reset_eval_stats(self):
         self.cnt_dict = {'rAc': 0., 'rBc': 0, 'fAc': 0., 'fBc': 0.,

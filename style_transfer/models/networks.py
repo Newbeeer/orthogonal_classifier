@@ -50,7 +50,7 @@ def get_scheduler(optimizer, opt):
     """
     if opt.lr_policy == 'linear':
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.n_epochs) / float(opt.n_epochs_decay + 1)
+            lr_l = 1.0 - max(0, epoch - opt.n_epochs) / float(opt.n_epochs_decay + 1)
             return lr_l
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
     elif opt.lr_policy == 'step':
@@ -390,7 +390,7 @@ class MNIST_G(nn.Module):
         out = F.leaky_relu(self.conv4(out), 0.05)  # ( " )
 
         out = F.leaky_relu(self.deconv1(out), 0.05)  # (?, 64, 16, 16)
-        out = F.tanh(self.deconv2(out))  # (?, 3, 32, 32)
+        out = torch.tanh(self.deconv2(out))  # (?, 3, 32, 32)
         return out
 
 

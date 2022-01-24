@@ -12,8 +12,12 @@ import check_img
 from utils import im_weights_update
 import copy
 
+
+print('Args:')
+for k, v in sorted(vars(args).items()):
+    print('\t{}: {}'.format(k, v))
+
 seed = args.seed
-print("seed: ", seed, " , orth: ", args.orth, " , source: ", args.source, ", dann:", args.dann, ", iw:", args.iw, ", adda:", args.adda,  ", batch size:", args.batch_size)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
@@ -27,33 +31,33 @@ torch.backends.cudnn.deterministic = True
 feature_discriminator = Discriminator(large=args.large).cuda()
 # classifier network.
 classifier = Classifier(large=args.large).cuda()
-# state_dict = torch.load(f'./checkpoint/epoch_14_source_False_orth_True_r_{args.r}')['classifier_dict']
+# state_dict = torch.load(f'./checkpoint/epoch_14_source_False_orthogonal_True_r_{args.r}')['classifier_dict']
 # classifier.load_state_dict(state_dict)
 # set the midpoint
 midpoint = 21 if args.src == 'signs' or args.tgt == 'signs' else 5
 if args.src == 'cifar' or args.src == 'stl':
     midpoint = 4
-# loss functions
-cent = ConditionalEntropyLoss().cuda()
-r_ = torch.zeros(midpoint * 2)
-if args.src == 'signs' or args.tgt == 'signs':
-    r_ = torch.zeros(43)
-if args.src == 'cifar' or args.src == 'stl':
-    r_ = torch.zeros(9)
 
-r_[:midpoint] = args.r[::-1][0]
-r_[midpoint:] = args.r[::-1][1]
-xent = nn.CrossEntropyLoss(weight=r_, reduction='mean').cuda()
+
+# setup loss functions
+cent = ConditionalEntropyLoss().cuda()
+class_weights = torch.zeros(midpoint * 2)
+if args.src == 'signs' or args.tgt == 'signs':
+    class_weights = torch.zeros(43)
+if args.src == 'cifar' or args.src == 'stl':
+    class_weights = torch.zeros(9)
+
+class_weights[:midpoint] = args.r[::-1][0]
+class_weights[midpoint:] = args.r[::-1][1]
+xent = nn.CrossEntropyLoss(weight=class_weights, reduction='mean').cuda()
 sigmoid_xent = nn.BCEWithLogitsLoss(reduction='mean').cuda()
 vat_loss = VAT(classifier).cuda()
-print("mid points:", midpoint)
+
+print("mid point for unbalance classes:", midpoint)
 # optimizer.
 optimizer_cls = torch.optim.Adam(classifier.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
 optimizer_disc = torch.optim.Adam(feature_discriminator.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
 
-# datasets.
-# iterator_train, r_s = GenerateIterator(args, r_tgt=[1,1])
-# iterator_val = GenerateIterator_eval(args, r_tgt=[1,1])
 
 iterator_train, r_s = GenerateIterator(args)
 iterator_val = GenerateIterator_eval(args)
@@ -65,7 +69,7 @@ if args.iw:
     pseudo_target_label = torch.tensor(np.zeros((class_num, 1), dtype=np.float32),
                                    requires_grad=False).cuda()
 
-# loss params.
+# loss params (taken from appendix of VADA paper).
 dw = 1e-2
 cw = 1
 sw = 1
@@ -93,8 +97,6 @@ if args.src == 'digits' or args.tgt == 'digits':
 if args.src == 'mnistm' or args.tgt == 'mnistm':
     dw = 1e-1
     sw = 1
-    # state_dict = torch.load(f'./checkpoint/epoch_14_source_False_orth_True_r_{args.r}')['classifier_dict']
-    # classifier.load_state_dict(state_dict)
     pre_epoch = 0
 if args.src == 'svhn' and args.tgt == 'mnist':
     sw = 0
@@ -109,8 +111,6 @@ if args.dann:
 print(f"dw:{dw}, cw:{cw}, sw:{sw}, tw:{tw}, bw:{bw}, pre epoch:{pre_epoch}, start epoch:{start_epoch}")
 
 ''' Exponential moving average (simulating teacher model) '''
-ema = EMA(0.998)
-ema.register(classifier)
 best_val_acc = -1
 p_c_tgt = 0.5
 p_not_c_tgt = 0.5
@@ -141,9 +141,7 @@ for epoch in range(args.num_epoch):
         print("copy network weights")
         classifier_tgt = Classifier(large=args.large).cuda()
         if args.resume:
-            path = f'./checkpoint/epoch_{args.resume_epoch}_source_{args.source}_adda_True_r_{args.r}'
-            print("load from ", path)
-            state_dict = torch.load(path)['classifier_dict']
+            state_dict = torch.load(args.resume_path)['classifier_dict']
             classifier_tgt.load_state_dict(state_dict)
             classifier.load_state_dict(state_dict)
         else:
@@ -155,22 +153,8 @@ for epoch in range(args.num_epoch):
     for images_source, labels_source, images_target, labels_target in pbar:
 
         images_source, labels_source, images_target, labels_target = images_source.cuda(), labels_source.cuda(), images_target.cuda(), labels_target.cuda()
-        if args.balance:
-            # make the dataset balance
-            img_s_0 = images_source[labels_source < midpoint]
-            img_s_1 = images_source[labels_source >= midpoint]
-            img_t_0 = images_target[labels_target < midpoint]
-            img_t_1 = images_target[labels_target >= midpoint]
-            label_s_0 = labels_source[labels_source < midpoint]
-            label_s_1 = labels_source[labels_source >= midpoint]
-            label_t_0 = labels_target[labels_target < midpoint]
-            label_t_1 = labels_target[labels_target >= midpoint]
-            length = min(len(img_s_0), len(img_t_0), len(img_t_1), len(img_s_1))
-            images_source = torch.cat((img_s_0[:length], img_s_1[:length]), dim=0)
-            images_target = torch.cat((img_t_0[:length], img_t_1[:length]), dim=0)
-            labels_source = torch.cat((label_s_0[:length], label_s_1[:length]), dim=0)
-            labels_target = torch.cat((label_t_0[:length], label_t_1[:length]), dim=0)
-        if args.source:
+
+        if args.source_only:
             ' Classifier losses setup. '
             # supervised/source classification.
             feats_source, pred_source = classifier(images_source)
@@ -344,7 +328,7 @@ for epoch in range(args.num_epoch):
                 correct_src = torch.ones_like(real_logit.squeeze()).eq(pred_src.max(1)[1]).sum() / len(real_logit)
                 correct_tgt = torch.zeros_like(fake_logit.squeeze()).eq(pred_tgt.max(1)[1]).sum() / len(fake_logit)
 
-                if args.orth and epoch >= max(pre_epoch, 1):
+                if args.orthogonal and epoch >= max(pre_epoch, 1):
                     #  1: src; 0: tgt
                     domain_src = torch.sigmoid(real_logit)
                     domain_src = torch.cat([1 - domain_src, domain_src], dim=1)
@@ -432,26 +416,14 @@ for epoch in range(args.num_epoch):
             pred_src = pred[labels_source.long()]
             pred_tgt = pred_tgt @ pred
 
-            # p_c_tgt = pred_tgt[:, :midpoint].sum() / len(pred_tgt)
-            # p_not_c_tgt = pred_tgt[:, midpoint:].sum() / len(pred_tgt)
-            # p_c_tgt_x = pred_tgt[:, :midpoint].sum(1)
-            # p_not_c_tgt_x = pred_tgt[:, midpoint:].sum(1)
-            # mask = (labels_source < midpoint).float()
-
-            # pred_src = torch.ones((len(pred_src))).cuda() * (args.r[0]/(args.r[0] + p_c_tgt)) * mask \
-            #            + torch.ones((len(pred_src))).cuda() * (args.r[1]/(args.r[1] + p_not_c_tgt)) * (1-mask)
-
             pred_src = pred_src.unsqueeze(1)
             pred_src = torch.cat([1-pred_src, pred_src], dim=1)
-
-            # pred_tgt = torch.ones((len(pred_src))).cuda() * (args.r[0]/(args.r[0] + p_c_tgt)) * p_c_tgt_x \
-            #            + torch.ones((len(pred_src))).cuda() * (args.r[1]/(args.r[1] + p_not_c_tgt)) * p_not_c_tgt_x
             pred_tgt = pred_tgt.unsqueeze(1)
             pred_tgt = torch.cat([1-pred_tgt, pred_tgt], dim=1)
             correct_src = torch.ones_like(real_logit.squeeze()).eq(pred_src.max(1)[1]).sum() / len(real_logit)
             correct_tgt = torch.zeros_like(fake_logit.squeeze()).eq(pred_tgt.max(1)[1]).sum() / len(fake_logit)
 
-            if args.orth and epoch >= max(pre_epoch,1):
+            if args.orthogonal and epoch >= max(pre_epoch,1):
                 #  1: src; 0: tgt
                 domain_src = torch.sigmoid(real_logit)
                 domain_src = torch.cat([1-domain_src, domain_src], dim=1)
@@ -488,8 +460,6 @@ for epoch in range(args.num_epoch):
             loss_main.backward()
             optimizer_cls.step()
 
-            # # Polyak averaging.
-            # ema(classifier)  # TODO: move ema into the optimizer step fn.
 
             loss_domain_sum += loss_domain.item()
             loss_src_class_sum += loss_src_class.item()
@@ -501,14 +471,8 @@ for epoch in range(args.num_epoch):
             n_total += 1
 
             pbar.set_description('loss {:.3f},'
-                                 # ' domain {:.3f},'
-                                 # ' s cls {:.3f},'
-                                 # ' s vat {:.3f},'
-                                 # ' t c-ent {:.3f},'
-                                 # ' t vat {:.3f},'
-                                 # ' disc {:.3f}'
-                                 ' src w1 {:.3f},'
-                                 ' tgt w1 {:.3f}'.format(
+                                 ' D src acc {:.3f},'
+                                 ' D tgt acc {:.3f}'.format(
                 loss_main_sum / n_total,
                 correct_src.item(),
                 correct_tgt.item()
@@ -559,13 +523,3 @@ for epoch in range(args.num_epoch):
         else:
             eval(classifier, feature_discriminator)
 
-    if epoch == args.pretrain_epoch - 1 and args.save:
-        save_dict = {
-            "args": vars(args),
-            "classifier_dict": classifier.state_dict(),
-            "disc_dict": feature_discriminator.state_dict()
-        }
-        #path = f'./checkpoint/epoch_{epoch}_source_{args.source}_orth_{args.orth}_r_{args.r}'
-        path = f'./checkpoint/epoch_{epoch}_source_{args.source}_adda_{args.adda}_r_{args.r}'
-        print('Save to ...', path)
-        torch.save(save_dict, path)

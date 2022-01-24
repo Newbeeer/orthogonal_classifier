@@ -19,7 +19,7 @@ from util import misc
 import torch.nn.functional as F
 
 parser = argparse.ArgumentParser(description='Domain generalization')
-parser.add_argument('--data_dir', type=str)
+parser.add_argument('--data_dir', type=str, default='/data/scratch/ylxu/domainbed')
 parser.add_argument('--dataset', type=str, default="RotatedMNIST")
 parser.add_argument('--algorithm', type=str, default="ERM")
 parser.add_argument('--opt', type=str, default="SGD")
@@ -48,13 +48,17 @@ parser.add_argument('--model_save', action='store_true')
 parser.add_argument('--bias', type=float, nargs='+', default=[0.6, 0.6, 0])
 parser.add_argument('--stage', type=int, default=1)
 parser.add_argument('--lr', type=float, default=0.1)
-parser.add_argument('--gender', action='store_true')
+parser.add_argument('--cos_lam', type=float, default=1e-4)
+parser.add_argument('--trm_lam', type=float, default=1.)
+parser.add_argument('--fish_lam', type=float, default=0.5)
+parser.add_argument('--iters', type=int, default=1000)
+parser.add_argument('--image_size', type=int, default=128)
+parser.add_argument('--class_balanced', action='store_true')
 args = parser.parse_args()
 args.step = 0
 
-if not os.path.exists(os.path.join('.', args.dataset)):
-    os.makedirs(os.path.join('.', 'checkpoint', args.dataset), exist_ok=True)
-fn = partial(os.path.join, '.', 'checkpoint', args.dataset)
+os.makedirs(os.path.join('style_transfer', 'checkpoint', args.dataset), exist_ok=True)
+fn = partial(os.path.join, 'style_transfer', 'checkpoint', args.dataset)
 # If we ever want to implement checkpointing, just persist these values
 # every once in a while, and then load them from disk here.
 algorithm_dict = None
@@ -77,7 +81,6 @@ if args.hparams:
 print('HParams:')
 for k, v in sorted(hparams.items()):
     print('\t{}: {}'.format(k, v))
-
 random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
@@ -88,20 +91,34 @@ if torch.cuda.is_available():
     device = "cuda"
 else:
     device = "cpu"
+
+is_dg = (args.algorithm != 'ERM')
 if args.dataset == 'Celeba':
     if args.stage == 1:
-        # invariant on young & black
-        gnames = ['male_refine', 'female_refine']
+        # For training the $w_1$ classifier (principal classifier)
+        group_names = ['male_nonblond_refine', 'male_blond_refine', 'female_blond_refine', 'female_nonblond_refine']
+        dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, group_names, args.stage, args.image_size, dg=is_dg)
     elif args.stage == 2:
-        gnames = ['male_nonblond_refine', 'female_blond_refine']
+        # For training the ground-truth $w_2$ classifier (the real orthogonal classifier)
+        group_names = ['male_nonblond_refine', 'female_nonblond_refine', 'female_blond_refine', 'male_blond_refine']
+        dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, group_names, args.stage, args.image_size, dg=is_dg)
     elif args.stage == 3:
-        gnames = ['blond_refine', 'nonblond_refine']
+        # For training the full classifier $w_x$
+        group_names = ['male_refine', 'female_refine']
+        dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, group_names, args.stage, args.image_size)
     else:
-        NotImplementedError
-    print("Gnames:", gnames)
-    dataset = vars(dataset_domainbed)[args.dataset](gnames=gnames, image_size=128)
-elif args.dataset in vars(dataset_domainbed):
-    dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, args.bias, args.test_envs, hparams)
+        raise NotImplementedError
+    print(f"Group names:{group_names}, dataset len:{len(dataset)}")
+
+elif args.dataset == 'CMNIST':
+    args.epochs = 1
+    if args.stage == 1:
+        args.bias = [0.9, 0., 0.]
+    elif args.stage == 2:
+        args.bias = [0., 0.8, 0.8]
+    elif args.stage == 3:
+        args.bias = [0.9, 0.8, 0.8]
+    dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, args.bias, dg=is_dg)
 else:
     raise NotImplementedError
 
@@ -134,62 +151,47 @@ eval_loader_names += ['env{}_out'.format(i) for i in range(len(out_splits))]
 algorithm_class = algorithms.get_algorithm_class(args.algorithm)
 algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
                             len(dataset) - len(args.test_envs), hparams)
+if algorithm_dict is not None:
+    algorithm.load_state_dict(algorithm_dict)
+if args.resume:
+    # Load checkpoint.
+    print('==> Resuming from checkpoint..')
+    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load(f'style_transfer/checkpoint/{args.resume_path}.pth')
+    algorithm.load_state_dict(checkpoint['model_dict'],strict=False)
 
 algorithm.to(device)
-algorithm_inv = algorithm_class(dataset.input_shape, dataset.num_classes,
-                            len(dataset) - len(args.test_envs), hparams)
-if args.dataset == 'Celeba':
-    if args.gender:
-        checkpoint = torch.load(fn('stage1_128_ERM_oracle_13'))
-    else:
-        checkpoint = torch.load(fn('stage1_male_refine_female_refine_128'))
-else:
-    checkpoint = torch.load(args.resume_path)
-algorithm_inv.load_state_dict(checkpoint['model_dict'],strict=False)
-algorithm_inv.cuda()
-algorithm_inv.eval()
 steps_per_epoch = min([len(env) / hparams['batch_size'] for env in in_splits])
 print("steps per epoch:", steps_per_epoch)
-# args.epochs = int(2000./steps_per_epoch)
 checkpoint_freq = 200
 last_results_keys = None
-best_acc_in = 0.
 best_acc_out = 0.
-print("Training importance sampling classifier")
+train_loaders = [torch.utils.data.DataLoader(dataset=env, batch_size=hparams['batch_size'],
+                 num_workers=dataset.N_WORKERS, shuffle=True) for i, (env) in enumerate(in_splits) if
+                 i not in args.test_envs]
+print("train loader length:", len(train_loaders))
+
 
 def main(epoch):
 
     global last_results_keys
     global best_acc_out
-    global best_acc_in
 
     checkpoint_vals = collections.defaultdict(lambda: [])
-    train_loaders = torch.utils.data.DataLoader(dataset=in_splits[0], batch_size=hparams['batch_size'], shuffle=True,
-                                                 num_workers=dataset.N_WORKERS)
-    train_minibatches_iterator = train_loaders
+    train_minibatches_iterator = zip(*train_loaders)
+
     for batch in train_minibatches_iterator:
         step_start_time = time.time()
-
         minibatches_device = [(x.to(device), y.to(device))
-                              for x, y, _, _, _ in [batch]]
-        weights = F.softmax(algorithm_inv.predict(minibatches_device[0][0]), dim=1)
-        # print(weights[[minibatches_device[0][1] == 0]][:,0])
-        weights_ = torch.zeros(len(weights)).cuda()
-        weights_[minibatches_device[0][1] == 0] = 0.5 / weights[[minibatches_device[0][1] == 0]][:, 0]
-        weights_[minibatches_device[0][1] == 1] = 0.5 / weights[[minibatches_device[0][1] == 1]][:, 1]
-        # print(weights_)
-        # weights = torch.clamp(weights, 1e-1, 10)
-        sum = torch.isnan(weights).float().sum()
-        if sum > 0:
-            print("Nan Detect!")
-            exit(0)
+                              for x, y, _, _, _ in batch]
+        step_vals = algorithm.update(minibatches_device)
 
-        step_vals = algorithm.update(minibatches_device, weights=weights_)
         checkpoint_vals['step_time'].append(time.time() - step_start_time)
         args.step += 1
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
-        if args.step % (checkpoint_freq) == 0:
+
+        if args.step % checkpoint_freq == 0:
             results = {
                 'step': args.step,
                 'epoch': epoch,
@@ -206,12 +208,17 @@ def main(epoch):
             misc.print_row(results_keys, colwidth=12)
             misc.print_row([results[key] for key in results_keys],
                            colwidth=12)
-            name_in = 'env{}_in_acc'.format(0)
-            name_out = 'env{}_out_acc'.format(0)
-            if results[name_out] > best_acc_out:
-                best_acc_in = results[name_in]
-                best_acc_out = results[name_out]
-                path = os.path.join(args.output_dir, f"{args.algorithm}_bias_{args.bias}_seed_{args.trial_seed}_{args.dataset}.pth")
+            val_acc = 0.
+
+            # calculate the out-domain (test) acc
+            for i in range(len(train_loaders)):
+                name = 'env{}_out_acc'.format(i)
+                val_acc += results[name]
+            val_acc /= len(train_loaders)
+
+            # saving the checkpoint
+            if best_acc_out < val_acc or (epoch > 0 and (epoch % 5) == 0):
+                best_acc_out = val_acc
                 if args.model_save:
                     save_dict = {
                         "args": vars(args),
@@ -221,21 +228,18 @@ def main(epoch):
                         "model_hparams": hparams,
                         "model_dict": algorithm.state_dict()
                     }
-                    if args.dataset == 'Celeba':
-                        torch.save(save_dict, fn(f'reweight_{gnames[0]}_{gnames[1]}_128'))
-                        print("Save to:", fn(f'reweight_{gnames[0]}_{gnames[1]}_128'))
-                    else:
-                        torch.save(save_dict, fn(args.save_path))
-                        print("Save to:", fn(args.save_path))
 
+                    torch.save(save_dict, fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
+                    print("Save to:", fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
+
+        if args.step > 2500:
+            break
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
 
 
 if __name__ == "__main__":
 
-
     for epoch in range(args.epochs):
-        print("Epoch:", epoch)
         main(epoch)
-    print(f"Best in acc:{best_acc_in}, Best out acc:{best_acc_out}")
+    print(f"Best test acc:{best_acc_out}")

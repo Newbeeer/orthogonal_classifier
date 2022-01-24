@@ -150,13 +150,10 @@ class BaseModel(ABC):
 
         for name in self.model_names:
             if isinstance(name, str):
-                if self.opt.gender:
-                    save_filename = '%s_net_%s_%s_%s_g.pth' % (epoch, name, self.opt.obj, self.opt.alg)
-                else:
-                    save_filename = '%s_net_%s_%s_%s.pth' % (epoch, name, self.opt.obj, self.opt.alg)
+                save_filename = '%s_net_%s_%s_%s.pth' % (epoch, name, self.opt.obj, self.opt.alg)
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, 'net' + name)
-                print("Save to:", save_filename)
+                print("Save to:", save_path)
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
                     torch.save(net.module.cpu().state_dict(), save_path)
                     net.cuda(self.gpu_ids[0])
@@ -183,21 +180,16 @@ class BaseModel(ABC):
         Parameters:
             epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
         """
+        if epoch < 0:
+            return
         save_dir = self.save_dir if pre_name is None else os.path.join(self.opt.checkpoints_dir, pre_name)
         obj = self.opt.obj if pre_obj is None else pre_obj
         for name in self.model_names:
             if isinstance(name, str):
                 if pre_name is not None:
-                    if self.opt.gender:
-                        load_filename = '%s_net_%s_%s_%s_g.pth' % (epoch, name, obj, 'ERM')
-                    else:
-                        load_filename = '%s_net_%s_%s.pth' % (epoch, name, obj)
+                    load_filename = '%s_net_%s_%s_%s.pth' % (epoch, name, self.opt.obj, self.opt.alg)
                 else:
-                    if self.opt.gender:
-                        load_filename = '%s_net_%s_%s_%s_g.pth' % (epoch, name, obj, self.opt.alg)
-                    else:
-                        load_filename = '%s_net_%s_%s_%s.pth' % (epoch, name, obj, self.opt.alg)
-                        #load_filename = '%s_net_%s_%s.pth' % (epoch, name, obj)
+                    load_filename = '%s_net_%s_%s_%s.pth' % (epoch, name, obj, self.opt.alg)
                 load_path = os.path.join(save_dir, load_filename)
                 net = getattr(self, 'net' + name)
                 if isinstance(net, torch.nn.DataParallel):

@@ -36,35 +36,49 @@ if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
     opt.generate = True
     torch.manual_seed(123)
-    if opt.dataset == 'ColoredMNIST':
+    # prepare the dataset
+    if opt.dataset == 'CMNIST':
+        opt.batch_size = 128
+        opt.pretrain_epoch = 0
+        opt.netG = 'mnist'
+        opt.netD = 'mnist'
         hparams = {'input_shape': (3,28,28),
                    'num_classes': 2,
                    'opt': 'SGD',
                    'lr': 1e-1,
                    'weight_decay': 1e-4,
-                   'sch_size':600,
+                   'sch_size': 600,
                    'alg': opt.alg
         }
     elif opt.dataset == 'Celeba':
+        opt.batch_size = 32
+        opt.pretrain_epoch = 12
+        opt.netG = 'unet_128'
+        opt.netD = 'basic'
         hparams = {'input_shape': (3, 128, 128),
                    'num_classes': 2,
                    'opt': 'SGD',
                    'lr': 1e-1,
                    'weight_decay': 1e-4,
-                   'sch_size':600
+                   'sch_size': 600
         }
 
+    if not os.path.exists(os.path.join('.', opt.dataset)):
+        os.makedirs(os.path.join('style_transfer', 'checkpoint', opt.dataset), exist_ok=True)
+    fn = partial(os.path.join, 'style_transfer', 'checkpoint', opt.dataset)
     if opt.dataset == 'Celeba':
         if opt.gender:
-            gnames = ['male_refine', 'female_refine']
+            group_names = ['male_refine', 'female_refine']
         else:
-            gnames = ['male_nonblond_refine', 'female_blond_refine']
-        print("Group names:", gnames)
-        dataset = vars(dataset_domainbed)[opt.dataset](gnames=gnames, image_size=128)
+            group_names = ['male_nonblond_refine', 'female_nonblond_refine']
+        print("Group names:", group_names)
+        dataset = vars(dataset_domainbed)[opt.dataset](opt.data_dir, group_names, stage=3)
     elif opt.dataset in vars(dataset_domainbed):
-        dataset = vars(dataset_domainbed)[opt.dataset](opt.data_dir, opt.bias, [], hparams, eval=True)
+        dataset = vars(dataset_domainbed)[opt.dataset](opt.data_dir, opt.bias)
     else:
         raise NotImplementedError
+
+
     in_splits = []
     out_splits = []
     opt.holdout_fraction = 0.2
@@ -82,88 +96,62 @@ if __name__ == '__main__':
     eval_loader = torch.utils.data.DataLoader(dataset=out_splits[0], batch_size=64, shuffle=False,
                                                  num_workers=dataset.N_WORKERS)
     print(f"Len eval:{len(eval_loader.dataset)}")
-    fn = partial(os.path.join, '.', 'checkpoint', opt.dataset)
+    fn = partial(os.path.join, 'style_transfer', 'checkpoint', opt.dataset)
 
     algorithm_class = algorithms.get_algorithm_class('ERM')
     # loading checkpoints
-    w_o = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
-    if opt.dataset == 'Celeba':
-        checkpoint = torch.load(fn('stage2_128_ERM_oracle'))
-    else:
-        checkpoint = torch.load(f'checkpoint/ColoredMNIST/stage3_{0.6}_{0.6}')
-    w_o.load_state_dict(checkpoint['model_dict'])
-    w_o.cuda()
-    w_o.eval()
+    # ground-truth w_2 orthogonal classifier
+    w_2 = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
+    path = fn(f'stage_2_ERM_{opt.dataset}')
+    print("loading ground truth w_2 oracle from ", path)
+    checkpoint = torch.load(path)
+    w_2.load_state_dict(checkpoint['model_dict'])
+    w_2.cuda()
+    w_2.eval()
 
     w_1_oracle = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
-    if opt.dataset == 'Celeba':
-        path_oracle = 'stage1_128_ERM_oracle_13'
-        print("loading w1 oracle from ", fn(path_oracle))
-        checkpoint = torch.load(fn(path_oracle))
-    else:
-        checkpoint = torch.load(f'checkpoint/ColoredMNIST/stage1_{0.6}_{0.6}')
+    path_oracle = fn(f'stage_1_ERM_{opt.dataset}')
+    print("loading w_1 oracle from ", path_oracle)
+    checkpoint = torch.load(path_oracle)
     w_1_oracle.load_state_dict(checkpoint['model_dict'], strict=False)
     w_1_oracle.cuda()
     w_1_oracle.eval()
 
-    w_1_algorithm_class = algorithms.get_algorithm_class(opt.alg)
-    w_1 = w_1_algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
-    if opt.dataset == 'Celeba':
-        path_1 = f'stage1_male_nonblond_refine_male_blond_refine_128_{opt.alg}'
-        if opt.oracle:
-            path_1 = path_oracle
-        print("loading w1 from ", fn(path_1))
-        checkpoint = torch.load(fn(path_1))
-    else:
-        if opt.alg == 'ERM':
-            checkpoint = torch.load(f'checkpoint/ColoredMNIST/stage1_{0.6}_{0}_{0}')
-        else:
-            checkpoint = torch.load(f'checkpoint/ColoredMNIST/stage1_{0.6}_{opt.alg}')
-    w_1.load_state_dict(checkpoint['model_dict'], strict=False)
-    w_1.cuda()
-    w_1.eval()
-
     w_x = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
-    if opt.dataset == 'Celeba':
-        checkpoint = torch.load(fn('stage2_male_nonblond_refine_female_blond_refine_128'))
-    else:
-        checkpoint = torch.load(f'checkpoint/ColoredMNIST/stage2_{0.6}_{0.6}')
+    path = fn(f'stage_3_ERM_{opt.dataset}')
+    print("loading w_x from ", path)
+    checkpoint = torch.load(path)
     w_x.load_state_dict(checkpoint['model_dict'])
     w_x.cuda()
     w_x.eval()
 
 
-    if not os.path.exists(os.path.join('./generated_images', opt.out_path)):
-        os.makedirs(os.path.join('./generated_images', opt.out_path), exist_ok=True)
+    os.makedirs(os.path.join('style_transfer/generated_images', opt.out_path), exist_ok=True)
 
     model = create_model(opt)      # create a model given opt.model and other options
     model.setup(opt)               # regular setup: load and print networks; create schedulers
     total_iters = 0                # the total number of training iterations
     dataset_size = len(eval_loader.dataset)
-    model.load_networks(epoch=opt.resume_epoch)
+    model.load_networks(epoch=opt.resume_epoch, pre_name=opt.name, pre_obj='orthogonal')
     model.reset_eval_stats()
     
-    for epoch in range(1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-        epoch_start_time = time.time()  # timer for entire epoch
-        iter_data_time = time.time()    # timer for data loading per iteration
-        epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
-        for data in tqdm(eval_loader):  # inner loop within one epoch
+    epoch_start_time = time.time()  # timer for entire epoch
+    iter_data_time = time.time()    # timer for data loading per iteration
+    epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
+    for data in tqdm(eval_loader):  # inner loop within one epoch
 
-            iter_start_time = time.time()  # timer for computation per iteration
-            if total_iters % opt.print_freq == 0:
-                t_data = iter_start_time - iter_data_time
+        iter_start_time = time.time()  # timer for computation per iteration
+        if total_iters % opt.print_freq == 0:
+            t_data = iter_start_time - iter_data_time
 
-            total_iters += opt.batch_size
-            epoch_iter += opt.batch_size
-            if opt.reverse:
-                model.set_input(data, net_1=w_o, net_x=w_x, net_o=w_1_oracle, net_1_o=w_o,)
-            else:
-                model.set_input(data, net_1=w_1, net_x=w_x, net_o=w_o, net_1_o=w_1_oracle,)         # unpack data from dataset and apply preprocessing
-            model.forward_eval()
-            model.generate(save=opt.save)
-            model.eval_stats()
-            iter_data_time = time.time()
-        model.eval_stats(print_stat=True)
-        # model.inception()
-        print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs + opt.n_epochs_decay, time.time() - epoch_start_time))
-        print(f"Save {model.cnt} images")
+        total_iters += opt.batch_size
+        epoch_iter += opt.batch_size
+        model.set_input(data, epoch=-1, net_1=w_1_oracle, net_x=w_x, net_2=w_2, net_1_o=w_1_oracle,)
+        model.forward_eval()
+
+        model.generate(save=opt.save)
+        model.eval_stats()
+        iter_data_time = time.time()
+    model.eval_stats(print_stat=True)
+    print(model.cnt_img.values())
+    print(f"Save {sum(model.cnt_img.values())} images")
