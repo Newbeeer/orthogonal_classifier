@@ -71,7 +71,7 @@ Images will be save to `style_transfer/generated_images/out_path`
 
 CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --dataset CMNIST --name cmnist --obj orthogonal --out_path cmnist_out --resume_epoch 5`
 
-
+<br/><br/>
 
 ## Domain Adaptation (DA) with label shifts
 
@@ -98,7 +98,7 @@ seed: random seed
 
 
 
-
+<br/><br/>
 
 ## Fairness
 
