@@ -257,7 +257,7 @@ def main(args):
     elif args.hsic:
         train_hsic(args)
     else:
-        train_classifier_ori(args)
+        train_classifier(args)
 
 def train_hsic(args):
 
@@ -414,7 +414,7 @@ def train_classifier_laftr(args):
     print("Best ----- ")
     print(f"test acc:{best_test_acc}, eo :{eo}, dp:{dp}")
 
-def train_classifier_ori(args):
+def train_classifier(args):
     best_test_acc = 0.
     eo = 0.
     dp = 0.
@@ -422,6 +422,8 @@ def train_classifier_ori(args):
         from adult_data import create_torch_dataloader
     elif args.data == 'german':
         from german_data import create_torch_dataloader
+    else:
+        raise NotImplementedError
     train_loader, test_loader = create_torch_dataloader(batch=64)
     encoder = Encoder(z_dim=10).cuda()
     classifier = classifier_fc(z_dim=10).cuda()
@@ -441,9 +443,6 @@ def train_classifier_ori(args):
         train_loss = 0.0
         tcorrect = 0.0
         correct = 0.0
-        y_list_t = []
-        y_hat_list_t = []
-        u_list_t = []
         for iteration, (x, u, y) in enumerate(train_loader):
 
             x, u, y = x.cuda(), u.cuda(), y.cuda().long()
@@ -457,15 +456,8 @@ def train_classifier_ori(args):
             optimizer.step()
 
             train_loss += loss.item()
-            y_hat_list_t.append(pre.cpu().numpy())
             tcorrect += pre.eq(y).sum().item()
             train_loss += loss.item()
-
-            y_list_t.append(y.detach().cpu().numpy())
-            u_list_t.append(u.detach().cpu().numpy())
-        y_l_t = np.reshape(np.concatenate(y_list_t, axis=0), [-1])
-        y_h_l_t = np.reshape(np.concatenate(y_hat_list_t, axis=0), [-1])
-        u_l_t = np.reshape(np.concatenate(u_list_t, axis=0), [-1])
 
         y_list = []
         y_hat_list = []
@@ -486,7 +478,6 @@ def train_classifier_ori(args):
                 output = output[:, 1][:, None]
 
             pre = (output > 0.5).astype(np.float32)
-            # pre = np.random.randint(0, 2, pre.shape)
             correct += (pre == y.detach().cpu().numpy()).astype(np.float32).sum()
 
             y_list.append(y.detach().cpu().numpy())
@@ -522,6 +513,10 @@ if __name__ == '__main__':
     parser.add_argument("--gamma", type=float, default=5)
     parser.add_argument("--sigma", type=float, default=1)
     args = parser.parse_args()
+    if args.data == 'adult':
+        from adult_data import save_adult_datasets
+        save_adult_datasets()
+    print("Args:")
     for k, v in sorted(vars(args).items()):
         print('\t{}: {}'.format(k, v))
     main(args)

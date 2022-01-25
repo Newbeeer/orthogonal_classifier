@@ -12,6 +12,8 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
   - [Prepare Celeba-GH dataset](#celebagh)
   - Train [classifiers](#classifier) and [CycleGAN](#cyclegan)
 - [Domain Adaptation with label shifts](#da)
+  - [Prepare dataset pairs](#da.data)
+  - [Training][#da.train]
 
 - [Fairness](#fair)
 
@@ -89,7 +91,7 @@ CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --data
 
 ## Domain Adaptation (DA) with label shifts<a id="da"></a>
 
-#### Prepare src/tgt pairs with label shifts
+#### Prepare src/tgt pairs with label shifts<a id="da.data"></a>
 
 Please `cd /da/data` and run
 
@@ -105,7 +107,7 @@ For *SynthDigits* / *SynthSigns*dataset, please download it at [https://drive.go
 
 
 
-#### Training
+#### Training<a id="da.train"></a>
 
 ```shell
 python da/vada_train.py --r {r0} {r1} --src {source} --tgt {target}  --seed {seed} \
@@ -126,7 +128,7 @@ seed: random seed
 ## Fairness<a id="fair"></a>
 
 ```shell
-python fairness/method/train.py --data {data} --gamma {gamma} --sigma {sigma} \
+python fairness/methods/train.py --data {data} --gamma {gamma} --sigma {sigma} \
 (--orthogonal) (--laftr) (--mifr) (--hsic)
 
 data: dataset (adult | german)

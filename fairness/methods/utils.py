@@ -51,7 +51,6 @@ def accuracy(y, y_logits):
 
 def loss_dp(u_hat, u, y):
 
-    # d = torch.abs(u_hat[y==0] - u[y==0]).sum() / (y==0).float().sum() + torch.abs(u_hat[y==1] - u[y==1]).sum() / (y==1).float().sum()
     distance = 0
     for i in range(2):
         for j in range(2):
