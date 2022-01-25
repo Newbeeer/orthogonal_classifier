@@ -4,7 +4,7 @@ Implementations of  [*Controlling Directions Orthogonal to a Classifier*](https:
 
 Let's construct orthogonal classifiers for *controlled style transfer*, *domain adaptation with label shifts* and *fairness* problems :cowboy_hat_face: !
 
-
+<br/>
 
 ## Controlled Style Transfer
 
@@ -88,15 +88,13 @@ CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --data
 ```shell
 python da/vada_train.py --r 0.7 0.3 --src {source} --tgt {target}  --seed {seed} (--iw) (--orthogonal) (--source_only)
 
-source: source domain (mnist | mnistm | svhn | cifar | stl | signs)
-target: target domain (mnist | mnistm | svhn | cifar | stl | signs)
+source: source domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
+target: target domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 seed: random seed
 --source_only: vanilla ERM on the source domain
 --iw: use importance-weighted domain adaptation
 --orth: use orthogonal classifier
 ```
-
-
 
 <br/><br/>
 
@@ -112,9 +110,9 @@ data: dataset (adult | german)
 
 
 
+This implementation is based on / inspired by:
 
-
-
-
-
+- https://github.com/facebookresearch/DomainBed (code structure).
+- https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
+- https://github.com/ozanciga/dirt-t (VADA code)
 

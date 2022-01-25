@@ -181,7 +181,7 @@ class CycleGANModel(BaseModel):
                 image = img[idx].permute(1, 2, 0).squeeze().cpu().numpy()
                 image = ((image + 1.) * 127.5).astype(np.uint8)
                 imageio.imwrite(os.path.join('style_transfer/generated_images',
-                                             self.opt.out_path, str(self.cnt) + f'_{key}.jpg'), image)
+                                             self.opt.out_path, str(self.cnt_img[key]) + f'_{key}.jpg'), image)
                 self.cnt_img[key] += 1
 
         # save images for visualization
