@@ -66,7 +66,7 @@ if __name__ == '__main__':
         os.makedirs(os.path.join('style_transfer', 'checkpoint', opt.dataset), exist_ok=True)
     fn = partial(os.path.join, 'style_transfer', 'checkpoint', opt.dataset)
     if opt.dataset == 'Celeba':
-        group_names = ['male_nonblond_refine', 'female_nonblond_refine']
+        group_names = ['male_nonblond_refine', 'female_blond_refine']
         print("Group names:", group_names)
         dataset = vars(dataset_domainbed)[opt.dataset](opt.data_dir, group_names, stage=3)
     elif opt.dataset in vars(dataset_domainbed):

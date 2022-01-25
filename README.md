@@ -6,9 +6,22 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
 
 <br/>
 
-## Controlled Style Transfer
+## Outline
 
-#### Prepare Celeba-GH dataset:
+- [Controlled Style Transfer](#style)
+  - [Prepare Celeba-GH](#celebagh)
+  - Train [classifiers](#classifier) and [CycleGAN](#cyclegan)
+- [Domain Adaptation with label shifts](#da)
+
+- [Fairness](#fair)
+
+
+
+<br/>
+
+## Controlled Style Transfer<a id="style"></a>
+
+#### Prepare Celeba-GH dataset<a id="celebagh"></a>:
 
 ```shell
 python style_transfer/celeba_dataset.py --data_dir {path}
@@ -22,7 +35,7 @@ One can modify the `domain_fn` dictionary in the `style_transfer/celeba_dataset.
 
 
 
-#### Step 1: Train $w_1,w_x$ and the ground truth $w_2$ (for measuring $z_2$ accuracy)
+#### Step 1: Train $w_1,w_x$ and the ground truth $w_2$ (for measuring $z_2$ accuracy)<a id="classifier"></a>
 
 ```shell
 sh style_transfer/train_classifiers.sh {gpu} {path} {dataset} {alg}
@@ -37,7 +50,7 @@ CMNIST bash example: `sh style_transfer/train_classifiers.sh 0 ./data CMNIST ERM
 
 
 
-#### Step 2: Train controlled CycleGAN
+#### Step 2: Train controlled CycleGAN<a id="cyclegan"></a>
 
 ```shell
 python style_transfer/train_cyclegan.py --data_dir {path} --dataset {dataset} --obj {obj} --name {name}
@@ -74,7 +87,7 @@ CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --data
 
 <br/><br/>
 
-## Domain Adaptation (DA) with label shifts
+## Domain Adaptation (DA) with label shifts<a id="da"></a>
 
 #### Prepare src/tgt pairs with label shifts
 
@@ -100,7 +113,7 @@ seed: random seed
 
 <br/><br/>
 
-## Fairness
+## Fairness<a id="fair"></a>
 
 ```shell
 python fairness/method/train.py --data {data} --gamma {gamma} --sigma {sigma} \

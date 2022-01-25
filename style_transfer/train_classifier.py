@@ -104,7 +104,7 @@ if args.dataset == 'Celeba':
         dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, group_names, args.stage, args.image_size, dg=is_dg)
     elif args.stage == 3:
         # For training the full classifier $w_x$
-        group_names = ['male_refine', 'female_refine']
+        group_names = ['male_nonblond_refine', 'female_blond_refine']
         dataset = vars(dataset_domainbed)[args.dataset](args.data_dir, group_names, args.stage, args.image_size)
     else:
         raise NotImplementedError
