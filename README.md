@@ -119,7 +119,7 @@ source: source domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 target: target domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 seed: random seed
 --source_only: vanilla ERM on the source domain
---iw: use importance-weighted domain adaptation
+--iw: use importance-weighted domain adaptation algorithm [1]
 --orth: use orthogonal classifier
 ```
 
@@ -135,9 +135,9 @@ data: dataset (adult | german)
 gamma: hyper-parameter for MIFR, HSIC, LAFTR
 sigma: hyper-parameter for HSIC (kernel width)
 --orthogonal: use orthogonal classifier
---MIFR: use L-MIFR algorithm
---HSIC: use ReBias algorithm
---LAFTR: use LAFTR algorithm
+--MIFR: use L-MIFR algorithm [2]
+--HSIC: use ReBias algorithm [3]
+--LAFTR: use LAFTR algorithm [4]
 ```
 
 
@@ -150,4 +150,16 @@ The implementation of this repo is based on / inspired by:
 - https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
 - https://github.com/ozanciga/dirt-t (VADA code)
 - https://github.com/Britefury/self-ensemble-visual-domain-adapt (data generation)
+
+
+
+**\[1\]**: Remi Tachet des Combes, Han Zhao, Yu-Xiang Wang, and Geoffrey J. Gordon. *Domain adaptation with conditional distribution matching and generalized label shift*. *ArXiv*, abs/2003.04475, 2020.
+
+**\[2\]**: Jiaming Song, Pratyusha Kalluri, Aditya Grover, Shengjia Zhao, and S. Ermon. Learning controllable fair representations. In *AISTATS*, 2019.
+
+**\[3\]**: Hyojin Bahng, Sanghyuk Chun, Sangdoo Yun, Jaegul Choo, and Seong Joon Oh. Learning de-biased
+
+representations with biased representations. In *ICML*, 2020.
+
+**\[4\]**: David Madras, Elliot Creager, T. Pitassi, and R. Zemel. Learning adversarially fair and transferable representations. In *ICML*, 2018.
 
