@@ -13,7 +13,7 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
   - Train [classifiers](#classifier) and [CycleGAN](#cyclegan)
 - [Domain Adaptation with label shifts](#da)
   - [Prepare dataset pairs](#da.data)
-  - [Training][#da.train]
+  - [Training](#da.train)
 
 - [Fairness](#fair)
 
