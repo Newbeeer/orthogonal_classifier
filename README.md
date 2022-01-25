@@ -108,9 +108,9 @@ data: dataset (adult | german)
 
 
 
+<br/><br/>
 
-
-This implementation is based on / inspired by:
+This implementation of this repo is based on / inspired by:
 
 - https://github.com/facebookresearch/DomainBed (code structure).
 - https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
