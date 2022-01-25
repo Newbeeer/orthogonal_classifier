@@ -1,21 +1,18 @@
-import click
+import argparse
 
-@click.command()
-@click.option('--width', type=int, default=32)
-@click.option('--height', type=int, default=32)
-@click.option('--ignore_roi', is_flag=True, default=False)
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+parser.add_argument('--width', type=int, default=32)
+parser.add_argument('--height', type=int, default=32)
+args = parser.parse_args()
 
-
-
-def prepare(width, height, ignore_roi):
+def prepare():
     import os
     import sys
-    import numpy as np
-    import tables
-    import pandas as pd
     import tqdm
     import cv2
-    r = [0.7, 0.3]
+
+    r = args.r
     from scipy.io import loadmat, savemat
     import numpy as np
     def make_imbalance(label, img, r=[1., 1.]):
@@ -41,9 +38,7 @@ def prepare(width, height, ignore_roi):
         img_1 = img_1[:int(len(img_1) * r[1])]
 
         return np.concatenate((label_0, label_1), axis=0), np.concatenate((img_0, img_1), axis=0)
-    synsigns_path = '.'
-
-
+    synsigns_path = 'signs'
     data_path = os.path.join(synsigns_path, 'synthetic_data')
     labels_path = os.path.join(data_path, 'train_labelling.txt')
 

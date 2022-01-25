@@ -9,7 +9,7 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
 ## Outline
 
 - [Controlled Style Transfer](#style)
-  - [Prepare Celeba-GH](#celebagh)
+  - [Prepare Celeba-GH dataset](#celebagh)
   - Train [classifiers](#classifier) and [CycleGAN](#cyclegan)
 - [Domain Adaptation with label shifts](#da)
 
@@ -91,18 +91,28 @@ CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --data
 
 #### Prepare src/tgt pairs with label shifts
 
-```shell
+Please `cd /da/data` and run
 
+```shell
+python {dataset}.py --r {r0} {r1}
+
+r0: subsample ratio for the first half classes (default=0.7)
+r1: subsample ratio for the first half classes (default=0.3)
+dataset: mnist | mnistm | svhn | cifar | stl | signs | digits
 ```
+
+For *SynthDigits* / *SynthSigns*dataset, please download it at [https://drive.google.com/uc?id=0B9Z4d7lAwbnTSVR1dEFSRUFxOUU](https://drive.google.com/uc?id=0B9Z4d7lAwbnTSVR1dEFSRUFxOUU)  / [https://drive.google.com/open?id=1wgLzFwrUOz0dLjuCWZ0ylDWQR0xTdJ9X](https://drive.google.com/open?id=1wgLzFwrUOz0dLjuCWZ0ylDWQR0xTdJ9X). All the other datasets will be automatically downloaded 😉
 
 
 
 #### Training
 
 ```shell
-python da/vada_train.py --r 0.7 0.3 --src {source} --tgt {target}  --seed {seed} \
+python da/vada_train.py --r {r0} {r1} --src {source} --tgt {target}  --seed {seed} \
 (--iw) (--orthogonal) (--source_only)
 
+r0: subsample ratio for the first half classes (default=0.7)
+r1: subsample ratio for the first half classes (default=0.3)
 source: source domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 target: target domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 seed: random seed
@@ -126,9 +136,10 @@ data: dataset (adult | german)
 
 <br/><br/>
 
-This implementation of this repo is based on / inspired by:
+The implementation of this repo is based on / inspired by:
 
 - https://github.com/facebookresearch/DomainBed (code structure).
 - https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
 - https://github.com/ozanciga/dirt-t (VADA code)
+- https://github.com/Britefury/self-ensemble-visual-domain-adapt (data generation)
 

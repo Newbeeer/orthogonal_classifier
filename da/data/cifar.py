@@ -2,11 +2,13 @@ import subprocess
 import os
 from scipy.io import loadmat, savemat
 import numpy as np
-import gzip
 import pickle
-from skimage.transform import resize
-
-r = [0.3, 0.7]
+from torchvision.datasets.utils import download_and_extract_archive, check_integrity
+import argparse
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 def make_imbalance(label, img, r=[1., 1.]):
     label = np.array(label)
@@ -55,7 +57,22 @@ def main():
         'key': 'label_names',
         'md5': '5ff9c542aee3614f3951f8cda6e48888',
     }
-    root = '/home/ylxu/data'
+    root = './cifar'
+    def _check_integrity():
+        root = './cifar'
+        for fentry in train_list + test_list:
+            filename, md5 = fentry[0], fentry[1]
+            fpath = os.path.join(root, base_folder, filename)
+            if not check_integrity(fpath, md5):
+                return False
+        return True
+
+    if _check_integrity():
+        print("Files already downloaded and verified")
+    else:
+        os.makedirs('./cifar', exist_ok=True)
+        download_and_extract_archive(url, './cifar', filename=filename, md5=tgz_md5)
+
     trainx = []
     trainy = []
     for file_name, checksum in train_list:
@@ -101,19 +118,19 @@ def main():
     print("Test x y:", testx.shape, len(testy))
 
     trainy, trainx = make_imbalance(trainy, trainx, r)
-    savemat(f'/home/ylxu/dirt-t/data/cifar32_train_{r}.mat', {'X': trainx, 'y': trainy})
+    savemat(f'./cifar/cifar32_train_{r}.mat', {'X': trainx, 'y': trainy})
 
     testy, testx = make_imbalance(testy, testx, r)
-    savemat(f'/home/ylxu/dirt-t/data/cifar32_test_{r}.mat', {'X': testx, 'y': testy})
+    savemat(f'./cifar/cifar32_test_{r}.mat', {'X': testx, 'y': testy})
 
     print(f"Loading cifar32_train_{r}.mat for sanity check")
-    data = loadmat(f'/home/ylxu/dirt-t/data/cifar32_train_{r}.mat')
+    data = loadmat(f'./cifar/cifar32_train_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 4).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 4).astype(np.float32).sum())
 
     print(f"Loading cifar32_test_{r}.mat for sanity check")
-    data = loadmat(f'/home/ylxu/dirt-t/data/cifar32_test_{r}.mat')
+    data = loadmat(f'./cifar/cifar32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 4).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 4).astype(np.float32).sum())

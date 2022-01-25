@@ -309,8 +309,8 @@ class CycleGANModel(BaseModel):
         self.backward_G()             # calculate gradients for G_A and G_B
 
         # prevent exploding gradient
-        torch.nn.utils.clip_grad_norm_(self.netG_A.parameters(), 1e-5)
-        torch.nn.utils.clip_grad_norm_(self.netG_B.parameters(), 1e-5)
+        # torch.nn.utils.clip_grad_norm_(self.netG_A.parameters(), 1e-5)
+        # torch.nn.utils.clip_grad_norm_(self.netG_B.parameters(), 1e-5)
         self.optimizer_G.step()       # update G_A and G_B's weights
 
         # # EMA

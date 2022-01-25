@@ -2,8 +2,11 @@ import subprocess
 import os
 from scipy.io import loadmat, savemat
 import numpy as np
-
-r = [0.7, 0.3]
+import argparse
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 def make_imbalance(label, img, r=[1., 1.]):
     label = np.array(label)
@@ -29,39 +32,39 @@ def make_imbalance(label, img, r=[1., 1.]):
     return np.concatenate((label_0, label_1), axis=0), np.concatenate((img_0, img_1), axis=3)
 
 def main():
-    if os.path.exists('test_32x32.mat') and os.path.exists('train_32x32.mat'):
+    if os.path.exists('./svhn/test_32x32.mat') and os.path.exists('./svhn/train_32x32.mat'):
         print("Using existing data")
 
     else:
         print( "Opening subprocess to download data from URL")
         subprocess.check_output(
             '''
-            wget http://ufldl.stanford.edu/housenumbers/train_32x32.mat
-            wget http://ufldl.stanford.edu/housenumbers/test_32x32.mat
-            wget http://ufldl.stanford.edu/housenumbers/extra_32x32.mat
+            mkdir svhn
+            wget http://ufldl.stanford.edu/housenumbers/train_32x32.mat -P svhn
+            wget http://ufldl.stanford.edu/housenumbers/test_32x32.mat -P svhn
             ''',
             shell=True)
 
     print("Loading train_32x32.mat for sanity check")
-    data = loadmat('train_32x32.mat')
+    data = loadmat('./svhn/train_32x32.mat')
     trainx = data['X']
     trainy = data['y']
     trainy[data['y']==10] = 0
     trainy, trainx = make_imbalance(trainy, trainx, r)
-    savemat(f'svhn32_train_{r}.mat', {'X': trainx, 'y': trainy})
-    data = loadmat(f'svhn32_train_{r}.mat')
+    savemat(f'./svhn/svhn32_train_{r}.mat', {'X': trainx, 'y': trainy})
+    data = loadmat(f'./svhn/svhn32_train_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())
 
     print("Loading test_32x32.mat for sanity check")
-    data = loadmat('test_32x32.mat')
+    data = loadmat('./svhn/test_32x32.mat')
     testx = data['X']
     testy = data['y']
     testy[data['y'] == 10] = 0
     testy, testx = make_imbalance(testy, testx, r)
-    savemat(f'svhn32_test_{r}.mat', {'X': testx, 'y': testy})
-    data = loadmat(f'svhn32_test_{r}.mat')
+    savemat(f'./svhn/svhn32_test_{r}.mat', {'X': testx, 'y': testy})
+    data = loadmat(f'./svhn/svhn32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())

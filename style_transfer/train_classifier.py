@@ -232,7 +232,7 @@ def main(epoch):
                     torch.save(save_dict, fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
                     print("Save to:", fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
 
-        if args.step > 2500:
+        if args.step > 2000:
             break
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')

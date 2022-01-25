@@ -16,40 +16,24 @@ class Dataset(data.Dataset):
             r_tgt = r_src
 
         r = r_src
-        if src == 'mnist2svhn':
-            print(f"dataset : mnist2svhn, file path : {f'data/mnist2svhn32_{r}.mat'}")
-            data = loadmat(f'data/mnist2svhn32_{r}.mat')
-            self.datalist_mnist = [{
-                'image': data['X'][ij],
-                'label': int(data['y'][0][ij])
-            } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
-            self.datalist_src = self.datalist_mnist
-        if src == 'svhn2mnist':
-            print(f"dataset : svhn2mnist, file path : {f'data/svhn2mnist32_{r}.mat'}")
-            data = loadmat(f'data/svhn2mnist32_{r}.mat')
-            self.datalist_mnist = [{
-                'image': data['X'][ij],
-                'label': int(data['y'][0][ij])
-            } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
-            self.datalist_src = self.datalist_mnist
         if src == 'mnist':
-            print(f"dataset : mnist, file path : {f'data/mnist32_train_{r}.mat'}")
-            data = loadmat(f'data/mnist32_train_{r}.mat')
+            print(f"dataset : mnist, file path : {f'data/mnist/mnist32_train_{r}.mat'}")
+            data = loadmat(f'data/mnist/mnist32_train_{r}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_src = self.datalist_mnist
         elif src == 'svhn':
-            print(f"dataset : svhn, file path : {f'data/svhn32_train_{r}.mat'}")
-            data = loadmat(f'data/svhn32_train_{r}.mat')
+            print(f"dataset : svhn, file path : {f'data/svhn/svhn32_train_{r}.mat'}")
+            data = loadmat(f'data/svhn/svhn32_train_{r}.mat')
             self.datalist_svhn = [{
                 'image': data['X'][..., ij],
                 'label': int(data['y'][ij][0]) if int(data['y'][ij][0]) < 10 else 0
             } for ij in range(data['y'].shape[0]) if np.random.rand() <= dataratio]
             self.datalist_src = self.datalist_svhn
         elif src == 'mnistm':
-            print(f"dataset : mnistm, file path : {f'data/mnistm32_train_{r}.mat'}")
+            print(f"dataset : mnistm, file path : {f'data/mnistm/mnistm32_train_{r}.mat'}")
             data = loadmat(f'data/mnistm32_train_{r}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
@@ -73,24 +57,24 @@ class Dataset(data.Dataset):
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_src = self.datalist_mnist
         elif src == 'gtsrb':
-            print(f"dataset : gtsrb, file path : {f'data/gtsrb32_train_{r}.mat'}")
-            data = loadmat(f'data/gtsrb32_train_{r}.mat')
+            print(f"dataset : gtsrb, file path : {f'data/GTSRB/gtsrb32_train_{r}.mat'}")
+            data = loadmat(f'data/GTSRB/gtsrb32_train_{r}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_src = self.datalist_mnist
         elif src == 'cifar':
-            print(f"dataset : cifar, file path : {f'data/cifar32_train_{r}.mat'}")
-            data = loadmat(f'data/cifar32_train_{r}.mat')
+            print(f"dataset : cifar, file path : {f'data/cifar/cifar32_train_{r}.mat'}")
+            data = loadmat(f'data/cifar/cifar32_train_{r}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_src = self.datalist_mnist
         elif src == 'stl':
-            print(f"dataset : stl, file path : {f'data/stl32_train_{r}.mat'}")
-            data = loadmat(f'data/stl32_train_{r}.mat')
+            print(f"dataset : stl, file path : {f'data/stl/stl32_train_{r}.mat'}")
+            data = loadmat(f'data/stl/stl32_train_{r}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
@@ -99,24 +83,24 @@ class Dataset(data.Dataset):
 
         r = r_tgt
         if tgt == 'mnist':
-            print(f"dataset : mnist, file path : {f'data/mnist32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/mnist32_train_{r[::-1]}.mat')
+            print(f"dataset : mnist, file path : {f'data/mnist/mnist32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/mnist/mnist32_train_{r[::-1]}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_target = self.datalist_mnist
         elif tgt == 'svhn':
-            print(f"dataset : svhn, file path : {f'data/svhn32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/svhn32_train_{r[::-1]}.mat')
+            print(f"dataset : svhn, file path : {f'data/svhn/svhn32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/svhn/svhn32_train_{r[::-1]}.mat')
             self.datalist_svhn = [{
                 'image': data['X'][..., ij],
                 'label': int(data['y'][ij][0]) if int(data['y'][ij][0]) < 10 else 0
             } for ij in range(data['y'].shape[0]) if np.random.rand() <= dataratio]
             self.datalist_target = self.datalist_svhn
         elif tgt == 'mnistm':
-            print(f"dataset : mnistm, file path : {f'data/mnistm32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/mnistm32_train_{r[::-1]}.mat')
+            print(f"dataset : mnistm, file path : {f'data/mnistm/mnistm32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/mnistm/mnistm32_train_{r[::-1]}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
@@ -139,24 +123,24 @@ class Dataset(data.Dataset):
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_target = self.datalist_mnist
         elif tgt == 'gtsrb':
-            print(f"dataset : gtsrb, file path : {f'data/gtsrb32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/gtsrb32_train_{r[::-1]}.mat')
+            print(f"dataset : gtsrb, file path : {f'data/GTSRB/gtsrb32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/GTSRB/gtsrb32_train_{r[::-1]}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_target = self.datalist_mnist
         elif tgt == 'cifar':
-            print(f"dataset : cifar, file path : {f'data/cifar32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/cifar32_train_{r[::-1]}.mat')
+            print(f"dataset : cifar, file path : {f'data/cifar/cifar32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/cifar/cifar32_train_{r[::-1]}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])
             } for ij in range(data['y'].shape[1]) if np.random.rand() <= dataratio]
             self.datalist_target = self.datalist_mnist
         elif tgt == 'stl':
-            print(f"dataset : stl, file path : {f'data/stl32_train_{r[::-1]}.mat'}")
-            data = loadmat(f'data/stl32_train_{r[::-1]}.mat')
+            print(f"dataset : stl, file path : {f'data/stl/stl32_train_{r[::-1]}.mat'}")
+            data = loadmat(f'data/stl/stl32_train_{r[::-1]}.mat')
             self.datalist_mnist = [{
                 'image': data['X'][ij],
                 'label': int(data['y'][0][ij])

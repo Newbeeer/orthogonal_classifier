@@ -5,7 +5,11 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from skimage.transform import resize
 import matplotlib.pyplot as plt
-r = [0.5, 0.5]
+import argparse
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 
 def process():
@@ -20,7 +24,20 @@ def process():
     print("Processing...")
 
     # load MNIST-M images from pkl file
-    with gzip.open('keras_mnistm.pkl.gz', "rb") as f:
+    # TODO get the dataset
+    if os.path.exists('./mnistm/keras_mnistm.pkl.gz'):
+        print("Using existing data")
+
+    else:
+        print( "Opening subprocess to download data from URL")
+        subprocess.check_output(
+            '''
+            mkdir mnsitm
+            wget https://github.com/VanushVaswani/keras_mnistm/releases/download/1.0/keras_mnistm.pkl.gz -P mnistm
+            ''',
+            shell=True)
+
+    with gzip.open('./mnistm/keras_mnistm.pkl.gz', "rb") as f:
         u = pickle._Unpickler(f)
         u.encoding = 'latin1'
         mnist_m_data = u.load()
@@ -28,8 +45,8 @@ def process():
     mnist_m_test_data = np.array(mnist_m_data["test"])
 
     # get MNIST labels
-    mnist_train_labels = datasets.MNIST(root='/home/ylxu/data', train=True, download=True).train_labels.numpy()
-    mnist_test_labels = datasets.MNIST(root='/home/ylxu/data', train=False, download=True).test_labels.numpy()
+    mnist_train_labels = datasets.MNIST(root='mnist', train=True, download=True).train_labels.numpy()
+    mnist_test_labels = datasets.MNIST(root='mnist', train=False, download=True).test_labels.numpy()
 
     # save MNIST-M dataset
     training_set = (mnist_m_train_data, mnist_train_labels)
@@ -66,9 +83,6 @@ def mnist_resize(x):
     for i, img in enumerate(x):
         # resize returns [0, 1]
         resized_x[i] = resize(img, (H, W), mode='reflect')
-        # if i==1:
-        #     plt.imsave("test.jpg", (resized_x[i] * 255).astype(np.uint8))
-        #     exit(0)
 
     return resized_x
 
@@ -80,22 +94,22 @@ def main():
     print("Train:", trainx.shape, trainy.shape)
     trainy, trainx = make_imbalance(trainy, trainx, r)
     trainx = mnist_resize(trainx)
-    savemat(f'mnistm32_train_{r}.mat', {'X': trainx, 'y': trainy})
+    savemat(f'./mnistm/mnistm32_train_{r}.mat', {'X': trainx, 'y': trainy})
 
     testx = test[0]
     testy = test[1]
     testy, testx = make_imbalance(testy, testx, r)
     testx = mnist_resize(testx)
-    savemat(f'mnistm32_test_{r}.mat', {'X': testx, 'y': testy})
+    savemat(f'./mnistm/mnistm32_test_{r}.mat', {'X': testx, 'y': testy})
 
     print(f"Loading mnistm32_train_{r}.mat for sanity check")
-    data = loadmat(f'mnistm32_train_{r}.mat')
+    data = loadmat(f'./mnistm/mnistm32_train_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())
 
     print(f"Loading mnistm32_test_{r}.mat for sanity check")
-    data = loadmat(f'mnistm32_test_{r}.mat')
+    data = loadmat(f'./mnistm/mnistm32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())

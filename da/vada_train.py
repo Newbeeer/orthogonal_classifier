@@ -8,7 +8,6 @@ from models import Classifier, Discriminator, EMA
 from vat import VAT, ConditionalEntropyLoss
 import torch.nn.functional as F
 import random
-import check_img
 from utils import im_weights_update
 import copy
 
@@ -31,13 +30,10 @@ torch.backends.cudnn.deterministic = True
 feature_discriminator = Discriminator(large=args.large).cuda()
 # classifier network.
 classifier = Classifier(large=args.large).cuda()
-# state_dict = torch.load(f'./checkpoint/epoch_14_source_False_orthogonal_True_r_{args.r}')['classifier_dict']
-# classifier.load_state_dict(state_dict)
 # set the midpoint
 midpoint = 21 if args.src == 'signs' or args.tgt == 'signs' else 5
 if args.src == 'cifar' or args.src == 'stl':
     midpoint = 4
-
 
 # setup loss functions
 cent = ConditionalEntropyLoss().cuda()
@@ -49,6 +45,7 @@ if args.src == 'cifar' or args.src == 'stl':
 
 class_weights[:midpoint] = args.r[::-1][0]
 class_weights[midpoint:] = args.r[::-1][1]
+# step up class-balanced cross-entropy loss
 xent = nn.CrossEntropyLoss(weight=class_weights, reduction='mean').cuda()
 sigmoid_xent = nn.BCEWithLogitsLoss(reduction='mean').cuda()
 vat_loss = VAT(classifier).cuda()
@@ -57,7 +54,6 @@ print("mid point for unbalance classes:", midpoint)
 # optimizer.
 optimizer_cls = torch.optim.Adam(classifier.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
 optimizer_disc = torch.optim.Adam(feature_discriminator.parameters(), lr=args.lr, betas=(args.beta1, args.beta2))
-
 
 iterator_train, r_s = GenerateIterator(args)
 iterator_val = GenerateIterator_eval(args)
@@ -69,7 +65,7 @@ if args.iw:
     pseudo_target_label = torch.tensor(np.zeros((class_num, 1), dtype=np.float32),
                                    requires_grad=False).cuda()
 
-# loss params (taken from appendix of VADA paper).
+# loss params (all are taken from appendix of VADA paper).
 dw = 1e-2
 cw = 1
 sw = 1
@@ -135,20 +131,6 @@ for epoch in range(args.num_epoch):
 
     print("estimate pt:", p_t_now)
     p_t_old[:] = 0.0
-
-    # setup target encoder for adda
-    if epoch == args.pretrain_epoch and args.adda:
-        print("copy network weights")
-        classifier_tgt = Classifier(large=args.large).cuda()
-        if args.resume:
-            state_dict = torch.load(args.resume_path)['classifier_dict']
-            classifier_tgt.load_state_dict(state_dict)
-            classifier.load_state_dict(state_dict)
-        else:
-            classifier_tgt.load_state_dict(copy.deepcopy(classifier.state_dict()))
-        # only update the feature extractor. The cycada repo uses a learning rate = 0.1 * pretrain learning rate
-        optimizer_tgt = torch.optim.Adam(classifier_tgt.feature_extractor.parameters(), lr=args.lr,
-                                             betas=(args.beta1, args.beta2))
 
     for images_source, labels_source, images_target, labels_target in pbar:
 
@@ -257,121 +239,6 @@ for epoch in range(args.num_epoch):
             pbar.set_description('loss {:.3f},'.format(
                 loss_main_sum / n_total,
             ))
-        elif args.adda:
-            # pretraining stage
-            if epoch < args.pretrain_epoch:
-                # supervised/source classification.
-                feats_source, pred_source = classifier(images_source)
-                feats_target, pred_target = classifier(images_target, track_bn=True)
-                loss_src_class = xent(pred_source, labels_source)
-
-                # combined loss.
-                loss_main = (
-                        cw * loss_src_class
-                )
-                # Update classifier.
-                optimizer_cls.zero_grad()
-                loss_main.backward()
-                optimizer_cls.step()
-
-                loss_main_sum += loss_main.item()
-                n_total += 1
-
-                pbar.set_description('loss {:.3f},'.format(
-                    loss_main_sum / n_total,
-                ))
-            # alignment stage
-            else:
-                feats_source, pred_source = classifier(images_source)
-                feats_source = feats_source.detach()
-                pred_source = pred_source.detach()
-                feats_target, pred_target = classifier_tgt(images_target, track_bn=True)
-
-                # discriminator loss.
-                for i in range(1):
-                    real_logit_disc = feature_discriminator(feats_source.detach())
-                    fake_logit_disc = feature_discriminator(feats_target.detach())
-
-                    loss_disc = 0.5 * (
-                            sigmoid_xent(real_logit_disc, torch.ones_like(real_logit_disc, device='cuda')) +
-                            sigmoid_xent(fake_logit_disc, torch.zeros_like(fake_logit_disc, device='cuda'))
-                    )
-
-                    # Update discriminator.
-                    optimizer_disc.zero_grad()
-                    loss_disc.backward()
-                    optimizer_disc.step()
-
-                # domain loss.
-                real_logit = feature_discriminator(feats_source)
-                fake_logit = feature_discriminator(feats_target)
-
-                # 1: src; 0: tgt
-                pred_src = F.softmax(pred_source, dim=1).detach()
-                pred_tgt = F.softmax(pred_target, dim=1).detach()
-
-                p_t_old += pred_tgt.sum(0)
-                cnt += len(pred_tgt)
-                pred = r_s / (r_s + p_t_now)
-                pred_src = pred[labels_source.long()]
-
-                pred_tgt = pred_tgt @ pred
-
-                # label_t = torch.argmax(pred_tgt, dim=1)
-                # pred_tgt = pred[label_t]
-
-                pred_src = pred_src.unsqueeze(1)
-                pred_src = torch.cat([1 - pred_src, pred_src], dim=1)
-
-                pred_tgt = pred_tgt.unsqueeze(1)
-                pred_tgt = torch.cat([1 - pred_tgt, pred_tgt], dim=1)
-                correct_src = torch.ones_like(real_logit.squeeze()).eq(pred_src.max(1)[1]).sum() / len(real_logit)
-                correct_tgt = torch.zeros_like(fake_logit.squeeze()).eq(pred_tgt.max(1)[1]).sum() / len(fake_logit)
-
-                if args.orthogonal and epoch >= max(pre_epoch, 1):
-                    #  1: src; 0: tgt
-                    domain_src = torch.sigmoid(real_logit)
-                    domain_src = torch.cat([1 - domain_src, domain_src], dim=1)
-                    domain_tgt = torch.sigmoid(fake_logit)
-                    domain_tgt = torch.cat([1 - domain_tgt, domain_tgt], dim=1)
-
-                    domain_src = domain_src / (pred_src + 1e-7)
-                    domain_src = domain_src / domain_src.sum(1, True)
-                    real_logit = domain_src[:, 1].unsqueeze(1)
-                    real_logit = torch.log(real_logit + 1e-7) - torch.log(1 - real_logit + 1e-7)
-
-                    domain_tgt = domain_tgt / (pred_tgt + 1e-7)
-                    domain_tgt = domain_tgt / domain_tgt.sum(1, True)
-                    fake_logit = domain_tgt[:, 1].unsqueeze(1)
-                    fake_logit = torch.log(fake_logit + 1e-7) - torch.log(1 - fake_logit + 1e-7)
-
-                loss_domain = 0.5 * (
-                        sigmoid_xent(real_logit, torch.zeros_like(real_logit, device='cuda')) +
-                        sigmoid_xent(fake_logit, torch.ones_like(fake_logit, device='cuda'))
-                )
-
-                # combined loss.
-                loss_main = (
-                        loss_domain
-                )
-
-                # Update classifier.
-                optimizer_tgt.zero_grad()
-                loss_main.backward()
-                optimizer_tgt.step()
-
-                loss_domain_sum += loss_domain.item()
-                loss_main_sum += loss_main.item()
-                loss_disc_sum += loss_disc.item()
-                n_total += 1
-
-                pbar.set_description('loss {:.3f},'
-                                     ' src w1 {:.3f},'
-                                     ' tgt w1 {:.3f}'.format(
-                    loss_main_sum / n_total,
-                    correct_src.item(),
-                    correct_tgt.item()
-                ))
         else:
             # pass images through the classifier network.
             feats_source, pred_source = classifier(images_source)
@@ -440,7 +307,6 @@ for epoch in range(args.num_epoch):
                 fake_logit = domain_tgt[:, 1].unsqueeze(1)
                 fake_logit = torch.log(fake_logit + 1e-7) - torch.log(1-fake_logit + 1e-7)
 
-
             loss_domain = 0.5 * (
                     sigmoid_xent(real_logit, torch.zeros_like(real_logit, device='cuda')) +
                     sigmoid_xent(fake_logit, torch.ones_like(fake_logit, device='cuda'))
@@ -460,7 +326,6 @@ for epoch in range(args.num_epoch):
             loss_main.backward()
             optimizer_cls.step()
 
-
             loss_domain_sum += loss_domain.item()
             loss_src_class_sum += loss_src_class.item()
             loss_src_vat_sum += loss_src_vat.item()
@@ -478,7 +343,6 @@ for epoch in range(args.num_epoch):
                 correct_tgt.item()
             ))
 
-
     p_t_old /= cnt
 
     if args.iw:
@@ -488,38 +352,32 @@ for epoch in range(args.num_epoch):
         im_weights = im_weights_update(r_s.cpu().detach().numpy(), pseudo_target_label.cpu().detach().numpy(), cov_mat.cpu().detach().numpy(),
                                         im_weights, ma=0.5)
     # validate.
-    if epoch % 1 == 0:
+    def eval(cls, feature):
 
-        def eval(cls, feature):
+        global best_val_acc
+        cls.eval()
+        feature.eval()
+        with torch.no_grad():
+            preds_val, gts_val = [], []
+            val_loss = 0
+            for images_target, labels_target in iterator_val:
+                images_target, labels_target = images_target.cuda(), labels_target.cuda()
 
-            global best_val_acc
-            cls.eval()
-            feature.eval()
-            with torch.no_grad():
-                preds_val, gts_val = [], []
-                val_loss = 0
-                for images_target, labels_target in iterator_val:
-                    images_target, labels_target = images_target.cuda(), labels_target.cuda()
+                # cross entropy based classification
+                _, pred_val = cls(images_target)
+                pred_val = np.argmax(pred_val.cpu().data.numpy(), 1)
 
-                    # cross entropy based classification
-                    _, pred_val = cls(images_target)
-                    pred_val = np.argmax(pred_val.cpu().data.numpy(), 1)
+                preds_val.extend(pred_val)
+                gts_val.extend(labels_target)
 
-                    preds_val.extend(pred_val)
-                    gts_val.extend(labels_target)
+            preds_val = np.asarray(preds_val)
+            gts_val = np.asarray(gts_val)
 
-                preds_val = np.asarray(preds_val)
-                gts_val = np.asarray(gts_val)
+            score_cls_val = (np.mean(preds_val == gts_val)).astype(np.float)
+            best_val_acc = max(score_cls_val, best_val_acc)
+            print('\n({}) acc. v {:.3f}, best: {:.3f}\n'.format(epoch, score_cls_val, best_val_acc))
 
-                score_cls_val = (np.mean(preds_val == gts_val)).astype(np.float)
-                best_val_acc = max(score_cls_val, best_val_acc)
-                print('\n({}) acc. v {:.3f}, best: {:.3f}\n'.format(epoch, score_cls_val, best_val_acc))
-
-            feature.train()
-            cls.train()
-
-        if args.adda and epoch >= args.pretrain_epoch:
-            eval(classifier_tgt, feature_discriminator)
-        else:
-            eval(classifier, feature_discriminator)
+        feature.train()
+        cls.train()
+    eval(classifier, feature_discriminator)
 

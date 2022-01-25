@@ -4,7 +4,11 @@ from scipy.io import loadmat, savemat
 import numpy as np
 from scipy.io import loadmat, savemat
 import matplotlib.pyplot as plt
-r = [0.9, 0.1]
+import argparse
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 def make_imbalance(label, img, r=[1., 1.]):
 
@@ -34,6 +38,7 @@ def make_imbalance(label, img, r=[1., 1.]):
 
 def main():
 
+    # TODO get the dataset
 
     train = loadmat(os.path.join('./SynthDigits', 'synth_train_32x32.mat'))
     test = loadmat(os.path.join('./SynthDigits', 'synth_test_32x32.mat'))

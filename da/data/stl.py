@@ -6,10 +6,14 @@ import gzip
 import pickle
 
 import cv2
-import check_img
+from torchvision.datasets.utils import download_and_extract_archive, check_integrity
 import torch
 from skimage.transform import downscale_local_mean, resize
-r = [0.3, 0.7]
+import argparse
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 def make_imbalance(label, img, r=[1., 1.]):
     label = np.array(label)
@@ -70,7 +74,23 @@ def main():
         ['test_y.bin', '36f9794fa4beb8a2c72628de14fa638e']
     ]
     splits = ('train', 'train+unlabeled', 'unlabeled', 'test')
-    root = '/data/scratch/ylxu/data'
+    root = 'stl'
+    
+    def _check_integrity() -> bool:
+        root = 'stl'
+        for fentry in (train_list + test_list):
+            filename, md5 = fentry[0], fentry[1]
+            fpath = os.path.join(root, base_folder, filename)
+            if not check_integrity(fpath, md5):
+                return False
+        return True
+
+    if _check_integrity():
+        print('Files already downloaded and verified')
+    else:
+        download_and_extract_archive(url, root, filename=filename, md5=tgz_md5)
+        _check_integrity()
+
 
     def loadfile(data_file: str, labels_file):
         labels = None
@@ -114,21 +134,21 @@ def main():
     # check_img.save_image(torch.from_numpy(trainx[:64]/255.), filename='t.png')
     # exit(0)
     trainx = trainx.transpose(0, 2, 3, 1)
-    savemat(f'/data/scratch/ylxu/dirt-t/data/stl32_train_{r}.mat', {'X': trainx, 'y': trainy})
+    savemat(f'stl/stl32_train_{r}.mat', {'X': trainx, 'y': trainy})
 
 
     testy, testx = make_imbalance(testy, testx, r)
     testx = testx.transpose(0, 2, 3, 1)
-    savemat(f'/data/scratch/ylxu/dirt-t/data/stl32_test_{r}.mat', {'X': testx, 'y': testy})
+    savemat(f'stl/stl32_test_{r}.mat', {'X': testx, 'y': testy})
 
     print(f"Loading stl32_train_{r}.mat for sanity check")
-    data = loadmat(f'/data/scratch/ylxu/dirt-t/data/stl32_train_{r}.mat')
+    data = loadmat(f'stl/stl32_train_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 4).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 4).astype(np.float32).sum())
 
     print(f"Loading stl32_test_{r}.mat for sanity check")
-    data = loadmat(f'/data/scratch/ylxu/dirt-t/data/stl32_test_{r}.mat')
+    data = loadmat(f'stl/stl32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 4).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 4).astype(np.float32).sum())

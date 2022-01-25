@@ -50,7 +50,6 @@ parser.add_argument('--save_path', type=str)
 # methods
 parser.add_argument('--orthogonal', action='store_true', default=False)
 parser.add_argument('--dann', action='store_true', default=False)
-parser.add_argument('--adda', action='store_true', default=False)
 parser.add_argument('--iw', action='store_true', default=False, help='importance-weighted')
 ######################## Model paths ########################
 
@@ -61,7 +60,7 @@ parser.add_argument('--eval_model_path',
 parser.add_argument('--model_save_path',
                     default='data/models')
 
-parser.add_argument('--r', type=float, nargs='+', default=[1., 1.])
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
 parser.add_argument('--src', type=str, default='svhn')
 parser.add_argument('--tgt', type=str, default='mnist')
 parser.add_argument('--seed', default=1234, type=int,

@@ -3,8 +3,12 @@ import numpy as np
 import subprocess
 from scipy.io import loadmat, savemat
 from skimage.transform import resize
+import argparse
 
-r = [0.3, 1]
+parser = argparse.ArgumentParser(description='dataset setup')
+parser.add_argument('--r', type=float, nargs='+', default=[0.7, 0.3])
+args = parser.parse_args()
+r = args.r
 
 def make_imbalance(label, img, r=[1., 1.]):
     label = np.array(label)
@@ -42,39 +46,40 @@ def mnist_resize(x):
     return resized_x
 
 def main():
-    if os.path.exists('mnist.npz'):
+    if os.path.exists('mnist/mnist.npz'):
         print("Using existing mnist.npz")
 
     else:
         print("Opening subprocess to download data from URL")
         subprocess.check_output(
             '''
-            wget https://s3.amazonaws.com/img-datasets/mnist.npz
+            mkdir mnist
+            wget https://s3.amazonaws.com/img-datasets/mnist.npz -P mnist
             ''',
             shell=True)
 
     print( "Resizing mnist.npz to (32, 32, 3)")
-    data = np.load('mnist.npz')
+    data = np.load('mnist/mnist.npz')
     trainx = data['x_train']
     trainy = data['y_train']
     trainy, trainx = make_imbalance(trainy, trainx, r)
     trainx = mnist_resize(trainx)
-    savemat(f'mnist32_train_{r}.mat', {'X': trainx, 'y': trainy})
+    savemat(f'mnist/mnist32_train_{r}.mat', {'X': trainx, 'y': trainy})
 
     testx = data['x_test']
     testy = data['y_test']
     testy, testx = make_imbalance(testy, testx, r)
     testx = mnist_resize(testx)
-    savemat(f'mnist32_test_{r}.mat', {'X': testx, 'y': testy})
+    savemat(f'mnist/mnist32_test_{r}.mat', {'X': testx, 'y': testy})
 
     print(f"Loading mnist32_train_{r}.mat for sanity check")
-    data = loadmat(f'mnist32_train_{r}.mat')
+    data = loadmat(f'mnist/mnist32_train_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())
 
     print(f"Loading mnist32_test_{r}.mat for sanity check")
-    data = loadmat(f'mnist32_test_{r}.mat')
+    data = loadmat(f'mnist/mnist32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())
     print("Label 0 size:", (data['y'] < 5).astype(np.float32).sum(), "Label 1 size:", (data['y'] >= 5).astype(np.float32).sum())
