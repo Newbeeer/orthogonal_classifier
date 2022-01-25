@@ -35,7 +35,7 @@ One can modify the `domain_fn` dictionary in the `style_transfer/celeba_dataset.
 
 
 
-#### Step 1: Train $w_1,w_x$ and the ground truth $w_2$ (for measuring $z_2$ accuracy)<a id="classifier"></a>
+#### Step 1: Train principal, full and oracle orthogonal classifiers <a id="classifier"></a>
 
 ```shell
 sh style_transfer/train_classifiers.sh {gpu} {path} {dataset} {alg}
