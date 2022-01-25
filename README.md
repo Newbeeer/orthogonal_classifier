@@ -18,7 +18,7 @@ path: path to the CelebA dataset
 
 bash example: `python style_transfer/celeba_dataset.py --data_dir ./data`
 
-You can modify the domain_fn dictionary in the `style_transfer/celeba_dataset.py` file to create new groups :bulb:
+One can modify the `domain_fn` dictionary in the `style_transfer/celeba_dataset.py` file to create new groups :bulb:
 
 
 
@@ -102,8 +102,10 @@ seed: random seed
 
 ## Fairness
 
-```
+```shell
+python fairness/method/train.py --data {data} --gamma {gamma} --sigma {sigma} (--orthogonal) (--laftr) (--mifr) (--hsic)
 
+data: dataset (adult | german)
 ```
 
 
