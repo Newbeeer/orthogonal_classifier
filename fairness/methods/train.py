@@ -146,7 +146,7 @@ def loss_KLD(mean, log_var):
     KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())
     return KLD / mean.size(0)
 
-def train_vae(args):
+def train_mifr(args):
     best_test_acc = 0.
     eo = 0.
     dp = 0.
@@ -251,9 +251,9 @@ def train_vae(args):
 def main(args):
 
     if args.laftr:
-        train_classifier_laftr(args)
+        train_laftr(args)
     elif args.mifr:
-        train_vae(args)
+        train_mifr(args)
     elif args.hsic:
         train_hsic(args)
     else:
@@ -332,7 +332,7 @@ def train_hsic(args):
     print("Final Best ----- ")
     print(f"test acc:{best_test_acc}, eo :{eo}, dp:{dp}")
 
-def train_classifier_laftr(args):
+def train_laftr(args):
     best_test_acc = 0.
     eo = 0.
     dp = 0.

@@ -132,6 +132,12 @@ python fairness/methods/train.py --data {data} --gamma {gamma} --sigma {sigma} \
 (--orthogonal) (--laftr) (--mifr) (--hsic)
 
 data: dataset (adult | german)
+gamma: hyper-parameter for MIFR, HSIC, LAFTR
+sigma: hyper-parameter for HSIC (kernel width)
+--orthogonal: use orthogonal classifier
+--MIFR: use L-MIFR algorithm
+--HSIC: use ReBias algorithm
+--LAFTR: use LAFTR algorithm
 ```
 
 
