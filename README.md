@@ -103,7 +103,7 @@ r1: subsample ratio for the first half classes (default=0.3)
 dataset: mnist | mnistm | svhn | cifar | stl | signs | digits
 ```
 
-For *SynthDigits* / *SynthSigns*dataset, please download it at [https://drive.google.com/uc?id=0B9Z4d7lAwbnTSVR1dEFSRUFxOUU](https://drive.google.com/uc?id=0B9Z4d7lAwbnTSVR1dEFSRUFxOUU)  / [https://drive.google.com/open?id=1wgLzFwrUOz0dLjuCWZ0ylDWQR0xTdJ9X](https://drive.google.com/open?id=1wgLzFwrUOz0dLjuCWZ0ylDWQR0xTdJ9X). All the other datasets will be automatically downloaded 😉
+For *SynthDigits* / *SynthSigns*dataset, please download them at [link_digits](https://drive.google.com/uc?id=0B9Z4d7lAwbnTSVR1dEFSRUFxOUU)  / [link_signs](https://drive.google.com/open?id=1wgLzFwrUOz0dLjuCWZ0ylDWQR0xTdJ9X). All the other datasets will be automatically downloaded 😉
 
 
 
