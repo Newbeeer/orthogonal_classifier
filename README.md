@@ -142,16 +142,11 @@ sigma: hyper-parameter for HSIC (kernel width)
 
 
 
-<br/><br/>
+<br/>
 
-The implementation of this repo is based on / inspired by:
+<br/>
 
-- https://github.com/facebookresearch/DomainBed (code structure).
-- https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
-- https://github.com/ozanciga/dirt-t (VADA code)
-- https://github.com/Britefury/self-ensemble-visual-domain-adapt (data generation)
-
-
+#### Reference
 
 **\[1\]**: Remi Tachet des Combes, Han Zhao, Yu-Xiang Wang, and Geoffrey J. Gordon. *Domain adaptation with conditional distribution matching and generalized label shift*. *ArXiv*, abs/2003.04475, 2020.
 
@@ -163,3 +158,11 @@ representations with biased representations. In *ICML*, 2020.
 
 **\[4\]**: David Madras, Elliot Creager, T. Pitassi, and R. Zemel. Learning adversarially fair and transferable representations. In *ICML*, 2018.
 
+<br/>
+
+The implementation of this repo is based on / inspired by:
+
+- https://github.com/facebookresearch/DomainBed (code structure).
+- https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix (code structure)
+- https://github.com/ozanciga/dirt-t (VADA code)
+- https://github.com/Britefury/self-ensemble-visual-domain-adapt (data generation)
