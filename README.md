@@ -57,7 +57,8 @@ To view training results and loss plots, run `python -m visdom.server` and click
 #### Evaluation and Generation
 
 ```shell
-python style_transfer/generate.py --data_dir {path} --dataset {dataset} --name {name} --obj {obj} --out_path {out_path} --resume_epoch {epoch} (--save)
+python style_transfer/generate.py --data_dir {path} --dataset {dataset} --name {name} \
+ --obj {obj} --out_path {out_path} --resume_epoch {epoch} (--save)
 
 path: path to the dataset (Celeba or MNIST)
 dataset: dataset (Celeba | CMNIST)
@@ -86,7 +87,8 @@ CMNIST bash example: `python style_transfer/generate.py --data_dir ./data --data
 #### Training
 
 ```shell
-python da/vada_train.py --r 0.7 0.3 --src {source} --tgt {target}  --seed {seed} (--iw) (--orthogonal) (--source_only)
+python da/vada_train.py --r 0.7 0.3 --src {source} --tgt {target}  --seed {seed} \
+(--iw) (--orthogonal) (--source_only)
 
 source: source domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 target: target domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
@@ -101,7 +103,8 @@ seed: random seed
 ## Fairness
 
 ```shell
-python fairness/method/train.py --data {data} --gamma {gamma} --sigma {sigma} (--orthogonal) (--laftr) (--mifr) (--hsic)
+python fairness/method/train.py --data {data} --gamma {gamma} --sigma {sigma} \
+(--orthogonal) (--laftr) (--mifr) (--hsic)
 
 data: dataset (adult | german)
 ```
