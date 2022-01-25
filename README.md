@@ -4,8 +4,6 @@ Implementations of  [*Controlling Directions Orthogonal to a Classifier*](https:
 
 Let's construct orthogonal classifiers for *controlled style transfer*, *domain adaptation with label shifts* and *fairness* problems :cowboy_hat_face: !
 
-<br/>
-
 ## Outline
 
 - [Controlled Style Transfer](#style)
@@ -16,10 +14,6 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
   - [Training](#da.train)
 
 - [Fairness](#fair)
-
-
-
-<br/>
 
 ## Controlled Style Transfer<a id="style"></a>
 
