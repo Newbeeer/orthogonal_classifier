@@ -49,7 +49,8 @@ CMNIST bash example: `sh style_transfer/train_classifiers.sh 0 ./data CMNIST ERM
 #### Step 2: Train controlled CycleGAN<a id="cyclegan"></a>
 
 ```shell
-python style_transfer/train_cyclegan.py --data_dir {path} --dataset {dataset} --obj {obj} --name {name}
+python style_transfer/train_cyclegan.py --data_dir {path} --dataset {dataset} \
+--obj {obj} --name {name}
 
 path: path to the dataset (Celeba or MNIST)
 dataset: dataset (Celeba | CMNIST)
