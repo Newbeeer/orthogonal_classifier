@@ -51,6 +51,8 @@ parser.add_argument('--save_path', type=str)
 parser.add_argument('--orthogonal', action='store_true', default=False)
 parser.add_argument('--dann', action='store_true', default=False)
 parser.add_argument('--iw', action='store_true', default=False, help='importance-weighted')
+parser.add_argument('--vada', action='store_true', default=False)
+
 ######################## Model paths ########################
 
 parser.add_argument('--train_model_path',

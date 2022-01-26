@@ -274,7 +274,7 @@ def GenerateIterator(args, iseval=False, r_tgt=None):
     y_onehot_t.scatter_(1, y_tgt, 1)
     r_s = y_onehot_s.sum(0) / len(y_onehot_s)
     r_t = y_onehot_t.sum(0) / len(y_onehot_t)
-    print("Class Priors: first half :{}, second half:{}".format(r_s, r_t))
+    print("(Class Priors) src :{}, tgt:{}".format(r_s, r_t))
     return data.DataLoader(dataset, **params), r_s.cuda()
 
 

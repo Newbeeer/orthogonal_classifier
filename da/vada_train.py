@@ -289,7 +289,7 @@ for epoch in range(args.num_epoch):
             correct_src = torch.ones_like(real_logit.squeeze()).eq(pred_src.max(1)[1]).sum() / len(real_logit)
             correct_tgt = torch.zeros_like(fake_logit.squeeze()).eq(pred_tgt.max(1)[1]).sum() / len(fake_logit)
 
-            if args.orthogonal and epoch >= max(pre_epoch,1):
+            if args.orthogonal and epoch >= max(pre_epoch, 1):
                 #  1: src; 0: tgt
                 domain_src = torch.sigmoid(real_logit)
                 domain_src = torch.cat([1-domain_src, domain_src], dim=1)
