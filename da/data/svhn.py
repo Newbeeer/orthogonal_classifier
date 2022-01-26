@@ -63,7 +63,7 @@ def main():
     testy = data['y']
     testy[data['y'] == 10] = 0
     testy, testx = make_imbalance(testy, testx, r)
-    savemat(f'./svhn/svhn32_test_{r}.mat', {'X': testx, 'y': testy})
+    savemat(f'./svhn/svhn32_test_{str(r)}.mat', {'X': testx, 'y': testy})
     data = loadmat(f'./svhn/svhn32_test_{r}.mat')
     print(data['X'].shape, data['X'].min(), data['X'].max())
     print(data['y'].shape, data['y'].min(), data['y'].max())

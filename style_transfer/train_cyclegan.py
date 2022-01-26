@@ -132,6 +132,8 @@ if __name__ == '__main__':
         model.reset_eval_stats()
         for i, data in enumerate(train_loader):  # inner loop within one epoch
 
+            if len(data[0]) < 2:
+                continue
             iter_start_time = time.time()  # timer for computation per iteration
             t_data = iter_start_time - iter_data_time
             total_iters += 1

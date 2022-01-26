@@ -107,7 +107,6 @@ if args.dann:
 print(f"dw:{dw}, cw:{cw}, sw:{sw}, tw:{tw}, bw:{bw}, pre epoch:{pre_epoch}, start epoch:{start_epoch}")
 
 ''' Exponential moving average (simulating teacher model) '''
-best_val_acc = -1
 p_c_tgt = 0.5
 p_not_c_tgt = 0.5
 # training..
@@ -128,8 +127,8 @@ for epoch in range(args.num_epoch):
     loss_disc_sum = 0
 
     p_t_now = copy.deepcopy(p_t_old)
-
-    print("estimate pt:", p_t_now)
+    if args.iw:
+        print("estimate pt:", p_t_now)
     p_t_old[:] = 0.0
 
     for images_source, labels_source, images_target, labels_target in pbar:
@@ -239,7 +238,7 @@ for epoch in range(args.num_epoch):
             pbar.set_description('loss {:.3f},'.format(
                 loss_main_sum / n_total,
             ))
-        else:
+        elif args.orthogonal:
             # pass images through the classifier network.
             feats_source, pred_source = classifier(images_source)
             feats_target, pred_target = classifier(images_target, track_bn=True)
@@ -342,7 +341,8 @@ for epoch in range(args.num_epoch):
                 correct_src.item(),
                 correct_tgt.item()
             ))
-
+        else:
+            raise NotImplementedError
     p_t_old /= cnt
 
     if args.iw:
@@ -354,7 +354,6 @@ for epoch in range(args.num_epoch):
     # validate.
     def eval(cls, feature):
 
-        global best_val_acc
         cls.eval()
         feature.eval()
         with torch.no_grad():
@@ -368,14 +367,13 @@ for epoch in range(args.num_epoch):
                 pred_val = np.argmax(pred_val.cpu().data.numpy(), 1)
 
                 preds_val.extend(pred_val)
-                gts_val.extend(labels_target)
+                gts_val.extend(labels_target.cpu())
 
             preds_val = np.asarray(preds_val)
             gts_val = np.asarray(gts_val)
 
             score_cls_val = (np.mean(preds_val == gts_val)).astype(np.float)
-            best_val_acc = max(score_cls_val, best_val_acc)
-            print('\n({}) acc. v {:.3f}, best: {:.3f}\n'.format(epoch, score_cls_val, best_val_acc))
+            print('\n({}) acc. v {:.3f}\n'.format(epoch, score_cls_val))
 
         feature.train()
         cls.train()

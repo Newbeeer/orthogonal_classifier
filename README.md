@@ -114,7 +114,7 @@ target: target domain (mnist | mnistm | svhn | cifar | stl | signs | digits)
 seed: random seed
 --source_only: vanilla ERM on the source domain
 --iw: use importance-weighted domain adaptation algorithm [1]
---orth: use orthogonal classifier
+--orthogonal: use orthogonal classifier
 ```
 
 <br/>
