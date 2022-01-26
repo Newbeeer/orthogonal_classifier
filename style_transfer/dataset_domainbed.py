@@ -97,8 +97,8 @@ class CMNIST(MultipleEnvironmentMNIST):
             config = [[2, True, bias[0], None, 13,  True, True, bias[1]]]
         else:
             config = [[2, True, bias[0], None, 13, True, True, 0, 0],
-                          [2, True, bias[0], None, 13, True, True, bias[1], bias[2]],
-                          [2, True, bias[0], None, 13, True, True, bias[3], bias[4]]]
+                       [2, True, bias[0], None, 13, True, True, bias[1]],
+                       [2, True, bias[0], None, 13, True, True, bias[2]]]
 
         print("config:", config)
         self.vis = False

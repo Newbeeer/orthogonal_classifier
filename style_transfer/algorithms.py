@@ -31,8 +31,6 @@ ALGORITHMS = [
     'EC',
     'Swap',
     'TRM',
-    'TRM2',
-    'TRM_DRO'
 ]
 
 
@@ -478,49 +476,6 @@ class IRM(ERM):
         all_x = torch.cat([x for x, y in minibatches])
         all_y = torch.cat([y for x, y in minibatches])
 
-        # # TRM -----
-        # loss_swap = 0.0
-        # # updating featurizer
-        # self.featurizer.eval()
-        # all_feature = self.featurizer(all_x).detach()
-        #
-        # for i in range(30):
-        #     all_logits_idx = 0
-        #     loss_erm = 0.
-        #     for j, (x, y) in enumerate(minibatches):
-        #         # j-th domain
-        #         feature = all_feature[all_logits_idx:all_logits_idx + x.shape[0]]
-        #         all_logits_idx += x.shape[0]
-        #         loss_erm += F.cross_entropy(self.clist[j](feature), y)
-        #     for opt in self.olist:
-        #         opt.zero_grad()
-        #     loss_erm.backward()
-        #     for opt in self.olist:
-        #         opt.step()
-        #
-        # self.featurizer.train()
-        # all_feature = self.featurizer(all_x)
-        # feature_split = list()
-        # y_split = list()
-        # all_logits_idx = 0
-        # for i, (x, y) in enumerate(minibatches):
-        #     feature = all_feature[all_logits_idx:all_logits_idx + x.shape[0]]
-        #     all_logits_idx += x.shape[0]
-        #     feature_split.append(feature)
-        #     y_split.append(y)
-        #
-        # for Q, (x, y) in enumerate(minibatches):
-        #     sample_list = list(range(len(minibatches)))
-        #     sample_list.remove(Q)
-        #     # calculate the swapping loss and product of gradient
-        #     loss_P = [F.cross_entropy(self.clist[Q](feature_split[i]), y_split[i])
-        #               for i in range(len(minibatches)) if i in sample_list]
-        #     loss_P = torch.max(torch.tensor(loss_P))
-        #     loss_swap += loss_P.item()
-        #
-        # loss_swap /= len(minibatches)
-        #
-        # # # TRM -----
         self.network.train()
         all_logits = self.network(all_x)
         all_logits_idx = 0
@@ -602,6 +557,7 @@ class VREx(ERM):
         self.optimizer.step()
         self.scheduler.step()
         self.update_count += 1
+
         return {'loss': loss.item(), 'nll': nll.item(),
                 'penalty': penalty.item()}
 

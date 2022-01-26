@@ -45,12 +45,13 @@ parser.add_argument('--resume_path', default="model", type=str, help='path to re
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--holdout_fraction', type=float, default=0.2)
 parser.add_argument('--model_save', action='store_true')
-parser.add_argument('--bias', type=float, nargs='+', default=[0.6, 0.6, 0])
+parser.add_argument('--bias', type=float, nargs='+', default=[0.9, 0.8, 0.8])
 parser.add_argument('--stage', type=int, default=1)
 parser.add_argument('--lr', type=float, default=0.1)
 parser.add_argument('--cos_lam', type=float, default=1e-4)
 parser.add_argument('--trm_lam', type=float, default=1.)
 parser.add_argument('--fish_lam', type=float, default=0.5)
+parser.add_argument('--dro_eta', type=float, default=1e-2)
 parser.add_argument('--iters', type=int, default=1000)
 parser.add_argument('--image_size', type=int, default=128)
 parser.add_argument('--class_balanced', action='store_true')
@@ -92,7 +93,10 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-is_dg = (args.algorithm != 'ERM')
+is_dg = (args.algorithm != 'ERM' and args.stage == 1)
+if is_dg:
+    args.test_envs = [0]
+
 if args.dataset == 'Celeba':
     if args.stage == 1:
         # For training the $w_1$ classifier (principal classifier)
@@ -111,9 +115,9 @@ if args.dataset == 'Celeba':
     print(f"Group names:{group_names}, dataset len:{len(dataset)}")
 
 elif args.dataset == 'CMNIST':
-    args.epochs = 1
+    args.epochs = 1 if not is_dg else 20
     if args.stage == 1:
-        args.bias = [0.9, 0., 0.]
+        args.bias = [0.9, 0., 0.] if not is_dg else [0.9, 0.8, 0.5]
     elif args.stage == 2:
         args.bias = [0., 0.8, 0.8]
     elif args.stage == 3:
@@ -208,13 +212,9 @@ def main(epoch):
             misc.print_row(results_keys, colwidth=12)
             misc.print_row([results[key] for key in results_keys],
                            colwidth=12)
-            val_acc = 0.
 
             # calculate the out-domain (test) acc
-            for i in range(len(train_loaders)):
-                name = 'env{}_out_acc'.format(i)
-                val_acc += results[name]
-            val_acc /= len(train_loaders)
+            val_acc = results['env{}_out_acc'.format(0)]
 
             # saving the checkpoint
             if best_acc_out < val_acc or (epoch > 0 and (epoch % 5) == 0):
@@ -228,7 +228,6 @@ def main(epoch):
                         "model_hparams": hparams,
                         "model_dict": algorithm.state_dict()
                     }
-
                     torch.save(save_dict, fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
                     print("Save to:", fn(f'stage_{args.stage}_{args.algorithm}_{args.dataset}'))
 

@@ -102,7 +102,7 @@ if args.dann:
     tw = 0
 print(f"dw:{dw}, cw:{cw}, sw:{sw}, tw:{tw}, pre epoch:{pre_epoch}, start epoch:{start_epoch}")
 
-''' Exponential moving average (simulating teacher model) '''
+best_val_acc = -1
 p_c_tgt = 0.5
 p_not_c_tgt = 0.5
 # training..
@@ -295,12 +295,12 @@ for epoch in range(args.num_epoch):
                 domain_src = domain_src / (pred_src + 1e-7)
                 domain_src = domain_src / domain_src.sum(1, True)
                 real_logit = domain_src[:, 1].unsqueeze(1)
-                real_logit = torch.log(real_logit+1e-7) - torch.log(1-real_logit + 1e-7)
+                real_logit = torch.log(real_logit + 1e-5) - torch.log(1-real_logit + 1e-5)
 
                 domain_tgt = domain_tgt / (pred_tgt + 1e-7)
                 domain_tgt = domain_tgt / domain_tgt.sum(1, True)
                 fake_logit = domain_tgt[:, 1].unsqueeze(1)
-                fake_logit = torch.log(fake_logit + 1e-7) - torch.log(1-fake_logit + 1e-7)
+                fake_logit = torch.log(fake_logit + 1e-5) - torch.log(1-fake_logit + 1e-5)
 
             loss_domain = 0.5 * (
                     sigmoid_xent(real_logit, torch.zeros_like(real_logit, device='cuda')) +
@@ -349,7 +349,7 @@ for epoch in range(args.num_epoch):
                                         im_weights, ma=0.5)
     # validate.
     def eval(cls, feature):
-
+        global best_val_acc
         cls.eval()
         feature.eval()
         with torch.no_grad():
@@ -368,8 +368,9 @@ for epoch in range(args.num_epoch):
             preds_val = np.asarray(preds_val)
             gts_val = np.asarray(gts_val)
 
-            score_cls_val = (np.mean(preds_val == gts_val)).astype(np.float)
-            print('\n({}) acc. v {:.3f}\n'.format(epoch, score_cls_val))
+            score_cls_val = (np.mean(preds_val == gts_val)).astype(np.float32)
+            best_val_acc = max(score_cls_val, best_val_acc)
+            print('\n({}) acc. v {:.3f}, best: {:.3f}\n'.format(epoch, score_cls_val, best_val_acc))
 
         feature.train()
         cls.train()

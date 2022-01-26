@@ -21,7 +21,7 @@ parser.add_argument('--beta2', default=0.999, type=float,
 parser.add_argument('--large', default=False, type=bool,
                     help=', use large network')
 
-parser.add_argument('--num_epoch', default=50, type=int,
+parser.add_argument('--num_epoch', default=30, type=int,
                     help='epochs to train for')
 parser.add_argument('--start_epoch', default=1, type=int,
                     help='epoch to start training. useful if continue from a checkpoint, or iw training')
@@ -55,10 +55,6 @@ parser.add_argument('--vada', action='store_true', default=False)
 
 ######################## Model paths ########################
 
-parser.add_argument('--train_model_path',
-                    default='data/models/model_resnet18_84.pt')
-parser.add_argument('--eval_model_path',
-                    default='data/models/model_resnet18_3.pt')
 parser.add_argument('--model_save_path',
                     default='data/models')
 
