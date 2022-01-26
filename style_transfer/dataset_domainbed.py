@@ -221,11 +221,12 @@ class Celeba(MultipleDomainDataset):
             assert len(group_names) == 2, "only two groups are allowable for w_x"
             dataset_1 = CelebA_group(root, self.group_names[0], transform=transform, label=0)
             dataset_2 = CelebA_group(root, self.group_names[1], transform=transform, label=1)
+            min_length = min(len(dataset_1.filename), len(dataset_2.filename))
 
             print(f"{self.group_names[0]} length: {len(list(dataset_1.filename))}, {self.group_names[1]} length: {len(list(dataset_2.filename))}")
-            dataset_1.filename = list(dataset_1.filename) + list(dataset_2.filename)
-            dataset_1.label = torch.cat([dataset_1.label, dataset_2.label])
-            dataset_1.attr = torch.cat([dataset_1.attr, dataset_2.attr], dim=0)
+            dataset_1.filename = list(dataset_1.filename[:min_length]) + list(dataset_2.filename[:min_length])
+            dataset_1.label = torch.cat([dataset_1.label[:min_length], dataset_2.label[:min_length]])
+            dataset_1.attr = torch.cat([dataset_1.attr[:min_length], dataset_2.attr[:min_length]], dim=0)
             self.datasets = [dataset_1]
         else:
             raise NotImplementedError

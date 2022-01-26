@@ -70,7 +70,6 @@ dw = 1e-2
 cw = 1
 sw = 1
 tw = 1e-2
-bw = 1e-2
 pre_epoch = 1
 start_epoch = 1
 if args.src == 'cifar' or args.tgt == 'cifar':
@@ -82,13 +81,11 @@ if args.src == 'signs' or args.tgt == 'signs':
     dw = 1e-2
     sw = 1
     tw = 1e-2
-    bw = 1e-2
     pre_epoch = 1
 if args.src == 'digits' or args.tgt == 'digits':
     dw = 1e-2
     sw = 1
     tw = 1e-2
-    bw = 1e-2
     pre_epoch = 1
 if args.src == 'mnistm' or args.tgt == 'mnistm':
     dw = 1e-1
@@ -103,8 +100,7 @@ if args.src == 'mnist' and args.tgt == 'svhn':
 if args.dann:
     sw = 0
     tw = 0
-    bw = 0
-print(f"dw:{dw}, cw:{cw}, sw:{sw}, tw:{tw}, bw:{bw}, pre epoch:{pre_epoch}, start epoch:{start_epoch}")
+print(f"dw:{dw}, cw:{cw}, sw:{sw}, tw:{tw}, pre epoch:{pre_epoch}, start epoch:{start_epoch}")
 
 ''' Exponential moving average (simulating teacher model) '''
 p_c_tgt = 0.5
