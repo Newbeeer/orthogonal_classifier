@@ -50,7 +50,7 @@ CMNIST bash example: `sh style_transfer/train_classifiers.sh 0 ./data CMNIST ERM
 
 ```shell
 python style_transfer/train_cyclegan.py --data_dir {path} --dataset {dataset} \
---obj {obj} --name {name}
+  --obj {obj} --name {name}
 
 path: path to the dataset (Celeba or MNIST)
 dataset: dataset (Celeba | CMNIST)
@@ -106,7 +106,7 @@ For *SynthDigits* / *SynthSigns*dataset, please download them at [link_digits](h
 
 ```shell
 python da/vada_train.py --r {r0} {r1} --src {source} --tgt {target}  --seed {seed} \
-(--iw) (--orthogonal) (--source_only)
+ (--iw) (--orthogonal) (--source_only)
 
 r0: subsample ratio for the first half classes (default=0.7)
 r1: subsample ratio for the first half classes (default=0.3)
@@ -125,7 +125,7 @@ seed: random seed
 
 ```shell
 python fairness/methods/train.py --data {data} --gamma {gamma} --sigma {sigma} \
-(--orthogonal) (--laftr) (--mifr) (--hsic)
+ (--orthogonal) (--laftr) (--mifr) (--hsic)
 
 data: dataset (adult | german)
 gamma: hyper-parameter for MIFR, HSIC, LAFTR
