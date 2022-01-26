@@ -115,6 +115,7 @@ seed: random seed
 --source_only: vanilla ERM on the source domain
 --iw: use importance-weighted domain adaptation algorithm [1]
 --orthogonal: use orthogonal classifier
+--vada: vanilla VADA [2]
 ```
 
 <br/>
@@ -129,9 +130,9 @@ data: dataset (adult | german)
 gamma: hyper-parameter for MIFR, HSIC, LAFTR
 sigma: hyper-parameter for HSIC (kernel width)
 --orthogonal: use orthogonal classifier
---MIFR: use L-MIFR algorithm [2]
---HSIC: use ReBias algorithm [3]
---LAFTR: use LAFTR algorithm [4]
+--MIFR: use L-MIFR algorithm [3]
+--HSIC: use ReBias algorithm [4]
+--LAFTR: use LAFTR algorithm [5]
 ```
 
 
@@ -144,11 +145,13 @@ sigma: hyper-parameter for HSIC (kernel width)
 
 **\[1\]**: Remi Tachet des Combes, Han Zhao, Yu-Xiang Wang, and Geoffrey J. Gordon. *Domain adaptation with conditional distribution matching and generalized label shift*. *ArXiv*, abs/2003.04475, 2020.
 
-**\[2\]**: Jiaming Song, Pratyusha Kalluri, Aditya Grover, Shengjia Zhao, and S. Ermon. Learning controllable fair representations. In *AISTATS*, 2019.
+**\[2\]** Rui Shu, H. Bui, H. Narui, and S. Ermon. A dirt-t approach to unsupervised domain adaptation. *ArXiv*, abs/1802.08735, 2018.
 
-**\[3\]**: Hyojin Bahng, Sanghyuk Chun, Sangdoo Yun, Jaegul Choo, and Seong Joon Oh. Learning de-biased representations with biased representations. In *ICML*, 2020.
+**\[3\]**: Jiaming Song, Pratyusha Kalluri, Aditya Grover, Shengjia Zhao, and S. Ermon. Learning controllable fair representations. In *AISTATS*, 2019.
 
-**\[4\]**: David Madras, Elliot Creager, T. Pitassi, and R. Zemel. Learning adversarially fair and transferable representations. In *ICML*, 2018.
+**\[4\]**: Hyojin Bahng, Sanghyuk Chun, Sangdoo Yun, Jaegul Choo, and Seong Joon Oh. Learning de-biased representations with biased representations. In *ICML*, 2020.
+
+**\[5\]**: David Madras, Elliot Creager, T. Pitassi, and R. Zemel. Learning adversarially fair and transferable representations. In *ICML*, 2018.
 
 <br/>
 

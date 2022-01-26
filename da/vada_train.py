@@ -238,7 +238,7 @@ for epoch in range(args.num_epoch):
             pbar.set_description('loss {:.3f},'.format(
                 loss_main_sum / n_total,
             ))
-        elif args.orthogonal:
+        elif args.vada or args.orthogonal:
             # pass images through the classifier network.
             feats_source, pred_source = classifier(images_source)
             feats_target, pred_target = classifier(images_target, track_bn=True)

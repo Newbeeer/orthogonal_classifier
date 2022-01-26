@@ -269,6 +269,8 @@ class CycleGANModel(BaseModel):
 
         if self.opt.obj == 'vanilla' or (self.opt.obj == 'orthogonal' and self.epoch <= self.opt.pretrain_epoch):
             # GAN loss D_A(G_A(A))
+            if self.epoch == 3:
+                print(self.fake_B.size(), self.fake_A.size())
             self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
             # GAN loss D_B(G_B(B))
             self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
