@@ -115,9 +115,9 @@ if args.dataset == 'Celeba':
     print(f"Group names:{group_names}, dataset len:{len(dataset)}")
 
 elif args.dataset == 'CMNIST':
-    args.epochs = 1 if not is_dg else 20
+    args.epochs = 1 if not is_dg else 5
     if args.stage == 1:
-        args.bias = [0.9, 0., 0.] if not is_dg else [0.9, 0.8, 0.5]
+        args.bias = [0.9, 0., 0.] if not is_dg else [0.9, 0.8, 0.4]
     elif args.stage == 2:
         args.bias = [0., 0.8, 0.8]
     elif args.stage == 3:
@@ -217,8 +217,9 @@ def main(epoch):
             val_acc = results['env{}_out_acc'.format(0)]
 
             # saving the checkpoint
-            if best_acc_out < val_acc or (epoch > 0 and (epoch % 5) == 0):
+            if best_acc_out < val_acc or (epoch + 1) % 5 == 0:
                 best_acc_out = val_acc
+                print("best acc:", best_acc_out)
                 if args.model_save:
                     save_dict = {
                         "args": vars(args),

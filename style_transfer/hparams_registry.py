@@ -104,8 +104,7 @@ def _hparams(algorithm, dataset, random_state, args):
         hparams['n'] = (30, 10**random_state.uniform(-1, 5))
         hparams['iters'] = (0, int(10 ** random_state.uniform(0, 4)))
         hparams['groupdro_eta'] = (args.dro_eta, 10 ** random_state.uniform(-3, -1))
-        if dataset == 'SceneCOCO':
-            hparams['iters'] = (200, int(10**random_state.uniform(0, 4)))
+
     return hparams
 
 def default_hparams(algorithm, dataset, args):

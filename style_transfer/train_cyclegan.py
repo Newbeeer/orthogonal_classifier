@@ -96,22 +96,29 @@ if __name__ == '__main__':
     algorithm_class = algorithms.get_algorithm_class('ERM')
     # loading checkpoints
     # ground-truth w_2 orthogonal classifier
-    w_2 = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
+    w_2_oracle = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
     path = fn(f'stage_2_ERM_{opt.dataset}')
     print("loading ground truth w_2 oracle from ", path)
     checkpoint = torch.load(path)
-    w_2.load_state_dict(checkpoint['model_dict'])
-    w_2.cuda()
-    w_2.eval()
+    w_2_oracle.load_state_dict(checkpoint['model_dict'])
+    w_2_oracle.cuda()
+    w_2_oracle.eval()
+
+    w_1_oracle = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
+    path_oracle = fn(f'stage_1_ERM_{opt.dataset}')
+    print("loading w_1 oracle from ", path_oracle)
+    checkpoint = torch.load(path_oracle)
+    w_1_oracle.load_state_dict(checkpoint['model_dict'], strict=False)
+    w_1_oracle.cuda()
+    w_1_oracle.eval()
 
     w_1 = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
-    path_oracle = fn(f'stage_1_{opt.alg}_{opt.dataset}')
-    print("loading w_1 from ", path_oracle)
-    checkpoint = torch.load(path_oracle)
+    path = fn(f'stage_1_{opt.alg}_{opt.dataset}')
+    print("loading w_1 from ", path)
+    checkpoint = torch.load(path)
     w_1.load_state_dict(checkpoint['model_dict'], strict=False)
     w_1.cuda()
     w_1.eval()
-
 
     w_x = algorithm_class(hparams['input_shape'], hparams['num_classes'], 1, hparams)
     path = fn(f'stage_3_ERM_{opt.dataset}')
@@ -136,8 +143,8 @@ if __name__ == '__main__':
             t_data = iter_start_time - iter_data_time
             total_iters += 1
             epoch_iter += 1
-            model.set_input(data, epoch=epoch, net_1=w_1, net_x=w_x, net_2=w_2,
-                            net_1_o=w_1)  # unpack data from dataset and apply preprocessing
+            model.set_input(data, epoch=epoch, net_1=w_1, net_x=w_x, net_2=w_2_oracle,
+                            net_1_o=w_1_oracle)  # unpack data from dataset and apply preprocessing
             model.optimize_parameters()  # calculate loss functions, get gradients, update network weights
             model.eval_stats()
 
@@ -156,8 +163,8 @@ if __name__ == '__main__':
         model.update_learning_rate()
         model.reset_eval_stats()
         for i, data in enumerate(eval_loader):  # inner loop within one epoch
-            model.set_input(data, epoch=epoch, net_1=w_1, net_x=w_x, net_2=w_2,
-                            net_1_o=w_1)  # unpack data from dataset and apply preprocessing
+            model.set_input(data, epoch=epoch, net_1=w_1, net_x=w_x, net_2=w_2_oracle,
+                            net_1_o=w_1_oracle)  # unpack data from dataset and apply preprocessing
             model.forward_eval()
             model.eval_stats()
         model.eval_stats(print_stat=True, eval=True)
@@ -167,13 +174,13 @@ if __name__ == '__main__':
             epoch, opt.n_epochs + opt.n_epochs_decay, time.time() - epoch_start_time))
 
     # pretrain the model
-    # model_pretrain = create_model(opt)      # create a model given opt.model and other options
-    # model_pretrain.setup(opt)               # regular setup: load and print networks; create schedulers
-    # visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
-    # total_iters = 0                # the total number of training iterations
-    # dataset_size = len(train_loader.dataset)
-    # for epoch in range(opt.pretrain_epoch):
-    #     train(model_pretrain, epoch)
+    model_pretrain = create_model(opt)      # create a model given opt.model and other options
+    model_pretrain.setup(opt)               # regular setup: load and print networks; create schedulers
+    visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
+    total_iters = 0                # the total number of training iterations
+    dataset_size = len(train_loader.dataset)
+    for epoch in range(opt.pretrain_epoch):
+        train(model_pretrain, epoch)
 
     # plug in orthogonal classifier after pretraining stage
     model = create_model(opt)      # create a model given opt.model and other options
@@ -184,5 +191,6 @@ if __name__ == '__main__':
     # loading pretrained CycleGAN
     model.load_networks(epoch=opt.pretrain_epoch-1, pre_name=opt.name, pre_obj='orthogonal')
     # controlled style transfer
+    print("------ Pretraining finishes ------")
     for epoch in range(opt.pretrain_epoch, opt.n_epochs + opt.n_epochs_decay + 1):
         train(model, epoch)
