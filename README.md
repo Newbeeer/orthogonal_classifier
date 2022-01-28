@@ -17,7 +17,9 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
 
 ## Controlled Style Transfer<a id="style"></a>
 
-#### Prepare Celeba-GH dataset<a id="celebagh"></a>:
+<img src="https://github.com/Newbeeer/orthogonal_classifier/blob/master/graph.png" width="650px" />
+
+#### Prepare CelebA-GH dataset<a id="celebagh"></a>:
 
 ```shell
 python style_transfer/celeba_dataset.py --data_dir {path}
