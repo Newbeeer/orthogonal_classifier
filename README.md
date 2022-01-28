@@ -17,7 +17,7 @@ Let's construct orthogonal classifiers for *controlled style transfer*, *domain 
 
 ## Controlled Style Transfer<a id="style"></a>
 
-<img src="https://github.com/Newbeeer/orthogonal_classifier/blob/master/graph.png" width="650px" />
+<img src="https://github.com/Newbeeer/orthogonal_classifier/blob/master/graph.png" width="850px" />
 
 #### Prepare CelebA-GH dataset<a id="celebagh"></a>:
 
