@@ -2,6 +2,8 @@
 
 Implementations of paper [*Controlling Directions Orthogonal to a Classifier*](https://openreview.net/forum?id=DIjCrlsu6Z) , ICLR 2022 (Spotlight),  &nbsp;[Yilun Xu](yilun-xu.com), [Hao He](http://people.csail.mit.edu/hehaodele/), [Tianxiao Shen](https://people.csail.mit.edu/tianxiao/), [Tommi Jaakkola](http://people.csail.mit.edu/tommi/tommi.html)
 
+[[Slide](https://www.dropbox.com/scl/fi/moj373pkubkk0wfn631jz/orthogonal_classifier.pptx?dl=0&rlkey=8dhw1ohz3c5ugvbqbsh9fww8m)]
+
 Let's construct orthogonal classifiers for *controlled style transfer*, *domain adaptation with label shifts* and *fairness* problems :cowboy_hat_face: !
 
 ## Outline
